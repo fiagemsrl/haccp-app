@@ -54,7 +54,7 @@ const defaultState = {
   reports: [],
 };
 
-function clone(value) {
+function clone(value: any) {
   return JSON.parse(JSON.stringify(value));
 }
 
