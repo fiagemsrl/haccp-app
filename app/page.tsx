@@ -635,12 +635,92 @@ async function addTemperature() {
     patch((prev: any) => ({ ...prev, [collection]: prev[collection].filter((item: any) => item.id !== id) }));
   }
 
-  function createReport(type: "temperature" | "checklist" | "nonconformities" | "products") {
-    const html = generateReportHtml(state, type);
-    const filename = `${type}-${today}.html`;
-    downloadTextFile(filename, html);
-    patch((prev: any) => ({ ...prev, reports: [{ id: Date.now(), type, filename, createdAt: new Date().toISOString(), generatedBy: prev.currentUser }, ...prev.reports] }));
+  async function createReport(
+  type: "temperature" | "checklist" | "nonconformities" | "products"
+) {
+  const { jsPDF } = await import("jspdf");
+  const autoTable = (await import("jspdf-autotable")).default;
+
+  const doc = new jsPDF();
+
+  doc.setFontSize(20);
+  doc.text("HACCP Easy", 14, 20);
+
+  doc.setFontSize(12);
+  doc.text(`Report: ${type}`, 14, 30);
+  doc.text(`Data: ${new Date().toLocaleString("it-IT")}`, 14, 38);
+
+  let body: any[] = [];
+  let head: string[] = [];
+
+  if (type === "temperature") {
+    head = ["Data", "Ora", "Area", "Temperatura", "Operatore", "Stato"];
+
+    body = state.temperatures.map((t: any) => [
+      t.date,
+      t.time,
+      t.area,
+      `${t.value}°C`,
+      t.operator,
+      t.status,
+    ]);
   }
+
+  if (type === "checklist") {
+    head = ["Data", "Controllo", "Area", "Stato"];
+
+    body = state.tasks.map((t: any) => [
+      t.date,
+      t.title,
+      t.area,
+      t.done ? "Completata" : "Aperta",
+    ]);
+  }
+
+  if (type === "nonconformities") {
+    head = ["Data", "Problema", "Gravità", "Stato"];
+
+    body = state.nonConformities.map((n: any) => [
+      n.date,
+      n.title,
+      n.severity,
+      n.status,
+    ]);
+  }
+
+  if (type === "products") {
+    head = ["Prodotto", "Lotto", "Scadenza", "Posizione"];
+
+    body = state.products.map((p: any) => [
+      p.name,
+      p.lot,
+      p.expiry,
+      p.location,
+    ]);
+  }
+
+  autoTable(doc, {
+    startY: 50,
+    head: [head],
+    body,
+  });
+
+  doc.save(`${type}-${today}.pdf`);
+
+  patch((prev: any) => ({
+    ...prev,
+    reports: [
+      {
+        id: Date.now(),
+        type,
+        filename: `${type}-${today}.pdf`,
+        createdAt: new Date().toISOString(),
+        generatedBy: prev.currentUser,
+      },
+      ...prev.reports,
+    ],
+  }));
+}
 
   function exportBackup() {
     downloadTextFile(`haccp-backup-${today}.json`, JSON.stringify(state, null, 2), "application/json");
