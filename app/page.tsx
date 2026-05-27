@@ -1,0 +1,760 @@
+"use client";
+
+import React, { useEffect, useMemo, useState } from "react";
+import { supabase } from "@/lib/supabase";
+import type { User } from "@supabase/supabase-js";
+
+const STORAGE_KEY = "haccp_easy_restaurant_app_v1";
+const today = new Date().toISOString().slice(0, 10);
+
+const defaultState = {
+  restaurant: {
+    id: "demo-restaurant",
+    name: "Ristorante Demo",
+    address: "Via Roma 1",
+    haccpManager: "Mario Rossi",
+    fridgeLimit: 4,
+    freezerLimit: -18,
+  },
+  currentUser: "Mario Rossi",
+  tasks: [
+    { id: 1, title: "Controllo temperature frigo/freezer", area: "Cucina", frequency: "Giornaliera", done: false, critical: true, date: today, operator: "" },
+    { id: 2, title: "Sanificazione piani di lavoro", area: "Cucina", frequency: "Giornaliera", done: true, critical: true, date: today, operator: "Lucia Bianchi" },
+    { id: 3, title: "Controllo scadenze prodotti aperti", area: "Magazzino", frequency: "Giornaliera", done: false, critical: false, date: today, operator: "" },
+    { id: 4, title: "Verifica merci in entrata", area: "Ricevimento", frequency: "Quando necessario", done: false, critical: true, date: today, operator: "" },
+    { id: 5, title: "Pulizia cappa e filtri", area: "Cucina", frequency: "Settimanale", done: false, critical: false, date: today, operator: "" },
+  ],
+  temperatures: [
+    { id: 1, area: "Frigo carne", value: 3.4, min: 0, max: 4, date: today, time: "08:20", operator: "Mario Rossi", status: "ok" },
+    { id: 2, area: "Freezer", value: -18.2, min: -25, max: -18, date: today, time: "08:21", operator: "Lucia Bianchi", status: "ok" },
+    { id: 3, area: "Frigo verdure", value: 7.1, min: 0, max: 6, date: today, time: "08:25", operator: "Mario Rossi", status: "alert" },
+  ],
+  products: [
+    { id: 1, name: "Mozzarella", lot: "MOZ-2401", expiry: "2026-05-28", location: "Frigo 1", quantity: "8 kg", opened: true, status: "in_scadenza" },
+    { id: 2, name: "Petto di pollo", lot: "POL-774", expiry: "2026-05-27", location: "Frigo carne", quantity: "5 kg", opened: false, status: "critico" },
+    { id: 3, name: "Pasta secca", lot: "PAS-115", expiry: "2027-01-12", location: "Dispensa", quantity: "20 kg", opened: false, status: "ok" },
+  ],
+  documents: [
+    { id: 1, name: "Manuale HACCP", type: "PDF", category: "Manuale", expiry: "2027-01-01", uploadedAt: today },
+    { id: 2, name: "Attestato formazione Mario", type: "PDF", category: "Formazione", expiry: "2026-09-15", uploadedAt: today },
+    { id: 3, name: "Contratto derattizzazione", type: "PDF", category: "Infestanti", expiry: "2026-06-30", uploadedAt: today },
+  ],
+  nonConformities: [
+    { id: 1, title: "Frigo verdure sopra soglia", severity: "Media", action: "Spostati alimenti e richiesta manutenzione", status: "Aperta", date: today, operator: "Mario Rossi" },
+  ],
+  staff: [
+    { id: 1, name: "Mario Rossi", role: "Responsabile HACCP", trainingExpiry: "2026-09-15", active: true },
+    { id: 2, name: "Lucia Bianchi", role: "Cuoco", trainingExpiry: "2026-11-10", active: true },
+    { id: 3, name: "Andrea Verdi", role: "Addetto sala", trainingExpiry: "2026-06-15", active: true },
+  ],
+  suppliers: [
+    { id: 1, name: "Caseificio Locale", category: "Latticini", phone: "0123456789", approved: true },
+    { id: 2, name: "Macelleria Centro", category: "Carne", phone: "0123456788", approved: true },
+  ],
+  reports: [],
+};
+
+function clone(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return clone(defaultState);
+    return { ...clone(defaultState), ...JSON.parse(raw) };
+  } catch {
+    return clone(defaultState);
+  }
+}
+
+function getTime() {
+  return new Date().toTimeString().slice(0, 5);
+}
+
+function cx(...classes) {
+  return classes.filter(Boolean).join(" ");
+}
+
+function daysUntil(dateString) {
+  const now = new Date(today + "T00:00:00");
+  const target = new Date(dateString + "T00:00:00");
+  return Math.ceil((target - now) / 86400000);
+}
+
+function getProductStatus(expiry) {
+  const days = daysUntil(expiry);
+  if (days <= 2) return "critico";
+  if (days <= 7) return "in_scadenza";
+  return "ok";
+}
+
+function getTemperatureStatus(area, value, settings) {
+  const lowerArea = String(area).toLowerCase();
+  if (lowerArea.includes("freezer") || lowerArea.includes("congel")) return value <= Number(settings.freezerLimit || -18) ? "ok" : "alert";
+  return value <= Number(settings.fridgeLimit || 4) ? "ok" : "alert";
+}
+
+function getTemperatureRange(area, settings) {
+  const lowerArea = String(area).toLowerCase();
+  if (lowerArea.includes("freezer") || lowerArea.includes("congel")) return { min: -25, max: Number(settings.freezerLimit || -18) };
+  return { min: 0, max: Number(settings.fridgeLimit || 4) };
+}
+
+function filterProducts(products, query) {
+  const q = String(query).trim().toLowerCase();
+  if (!q) return products;
+  return products.filter((product) => [product.name, product.lot, product.location, product.quantity].join(" ").toLowerCase().includes(q));
+}
+
+function calculateProgress(tasks) {
+  if (!tasks.length) return 0;
+  return Math.round((tasks.filter((task) => task.done).length / tasks.length) * 100);
+}
+
+function generateReportHtml(state, type) {
+  const date = new Date().toLocaleString("it-IT");
+  const rows = {
+    temperature: state.temperatures.map((t) => `<tr><td>${t.date}</td><td>${t.time}</td><td>${t.area}</td><td>${t.value}°C</td><td>${t.operator}</td><td>${t.status}</td></tr>`).join(""),
+    checklist: state.tasks.map((t) => `<tr><td>${t.date}</td><td>${t.title}</td><td>${t.area}</td><td>${t.done ? "Completata" : "Aperta"}</td><td>${t.operator || "-"}</td></tr>`).join(""),
+    nonconformities: state.nonConformities.map((n) => `<tr><td>${n.date}</td><td>${n.title}</td><td>${n.severity}</td><td>${n.status}</td><td>${n.action}</td></tr>`).join(""),
+    products: state.products.map((p) => `<tr><td>${p.name}</td><td>${p.lot}</td><td>${p.expiry}</td><td>${p.location}</td><td>${p.status}</td></tr>`).join(""),
+  };
+  const titles = {
+    temperature: "Registro temperature",
+    checklist: "Checklist operative",
+    nonconformities: "Registro non conformità",
+    products: "Registro magazzino e scadenze",
+  };
+  const headers = {
+    temperature: "<th>Data</th><th>Ora</th><th>Area</th><th>Temperatura</th><th>Operatore</th><th>Esito</th>",
+    checklist: "<th>Data</th><th>Controllo</th><th>Area</th><th>Stato</th><th>Operatore</th>",
+    nonconformities: "<th>Data</th><th>Problema</th><th>Gravità</th><th>Stato</th><th>Azione</th>",
+    products: "<th>Prodotto</th><th>Lotto</th><th>Scadenza</th><th>Posizione</th><th>Stato</th>",
+  };
+
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${titles[type]}</title><style>body{font-family:Arial,sans-serif;margin:32px;color:#0f172a}h1{margin-bottom:4px}.meta{color:#64748b;margin-bottom:24px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #cbd5e1;padding:8px;text-align:left;font-size:12px}th{background:#f1f5f9}.signature{margin-top:48px}</style></head><body><h1>${titles[type]}</h1><div class="meta">${state.restaurant.name} · Generato il ${date} · Responsabile ${state.restaurant.haccpManager}</div><table><thead><tr>${headers[type]}</tr></thead><tbody>${rows[type] || ""}</tbody></table><div class="signature">Firma responsabile HACCP: __________________________</div><script>window.print()</script></body></html>`;
+}
+
+function downloadTextFile(filename, content, mime = "text/html") {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function runSelfTests() {
+  const settings = defaultState.restaurant;
+  const results = [];
+  const test = (name, condition) => results.push({ name, passed: Boolean(condition) });
+  test("Frigo <= 4°C è OK", getTemperatureStatus("Frigo carne", 3.9, settings) === "ok");
+  test("Frigo > 4°C crea alert", getTemperatureStatus("Frigo verdure", 4.1, settings) === "alert");
+  test("Freezer <= -18°C è OK", getTemperatureStatus("Freezer", -18.5, settings) === "ok");
+  test("Freezer > -18°C crea alert", getTemperatureStatus("Freezer", -17.2, settings) === "alert");
+  test("Ricerca magazzino per lotto", filterProducts(defaultState.products, "POL-774").length === 1);
+  test("Progresso checklist calcolato", calculateProgress(defaultState.tasks) === 20);
+  test("Prodotto entro 2 giorni è critico", getProductStatus("2026-05-27") === "critico");
+  return results;
+}
+
+const selfTests = runSelfTests();
+
+function Icon({ name, className = "" }) {
+  const icons = {
+    alert: "⚠️", calendar: "📅", check: "✅", clipboard: "📋", dashboard: "📊", document: "📄", download: "⬇️", fridge: "❄️", package: "📦", plus: "+", search: "🔎", settings: "⚙️", shield: "🛡️", team: "👥", temp: "🌡️", upload: "⬆️", supplier: "🚚", report: "🧾", trash: "🗑️", save: "💾", print: "🖨️",
+  };
+  return <span className={cx("inline-flex h-5 w-5 items-center justify-center text-base", className)} aria-hidden="true">{icons[name] || "•"}</span>;
+}
+
+function Card({ children, className = "" }) {
+  return <div className={cx("rounded-3xl bg-white shadow-sm", className)}>{children}</div>;
+}
+
+function Button({ children, className = "", variant = "default", onClick, type = "button" }) {
+  return <button type={type} onClick={onClick} className={cx("inline-flex items-center justify-center rounded-2xl px-4 py-2.5 text-sm font-semibold transition active:scale-[0.99]", variant === "secondary" ? "bg-slate-100 text-slate-800 hover:bg-slate-200" : variant === "danger" ? "bg-rose-600 text-white hover:bg-rose-700" : "bg-slate-900 text-white hover:bg-slate-800", className)}>{children}</button>;
+}
+
+function Badge({ children, tone = "neutral" }) {
+  const tones = { neutral: "bg-slate-100 text-slate-700", ok: "bg-emerald-100 text-emerald-700", warn: "bg-amber-100 text-amber-700", danger: "bg-rose-100 text-rose-700", blue: "bg-blue-100 text-blue-700" };
+  return <span className={cx("rounded-full px-2.5 py-1 text-xs font-medium", tones[tone] || tones.neutral)}>{children}</span>;
+}
+
+function TextInput(props) {
+  return <input {...props} className={cx("w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-400", props.className || "")} />;
+}
+
+function SelectInput(props) {
+  return <select {...props} className={cx("w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-400", props.className || "")} />;
+}
+
+function NavButton({ active, icon, label, onClick }) {
+  return <button onClick={onClick} className={cx("flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm transition", active ? "bg-slate-900 text-white shadow-lg" : "text-slate-600 hover:bg-slate-100")}><Icon name={icon} />{label}</button>;
+}
+
+function StatCard({ icon, label, value, helper, tone }) {
+  return <Card><div className="p-5"><div className="flex items-start justify-between"><div><p className="text-sm text-slate-500">{label}</p><p className="mt-2 text-3xl font-bold text-slate-900">{value}</p><p className="mt-1 text-xs text-slate-500">{helper}</p></div><div className={cx("rounded-2xl p-3", tone || "bg-slate-100")}><Icon name={icon} /></div></div></div></Card>;
+}
+
+function SectionTitle({ title, subtitle, action }) {
+  return <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between"><div><h2 className="text-2xl font-bold text-slate-950">{title}</h2><p className="text-sm text-slate-500">{subtitle}</p></div>{action}</div>;
+}
+
+export default function HaccpRestaurantApp() {
+  const [user, setUser] = useState<User | null>(null);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [authMode, setAuthMode] = useState<"login" | "register">("login");
+  const [authError, setAuthError] = useState("");
+  const [state, setState] = useState(() => clone(defaultState));
+  const [mounted, setMounted] = useState(false);
+  const [page, setPage] = useState("dashboard");
+  const [query, setQuery] = useState("");
+  const [newTemp, setNewTemp] = useState({ area: "", value: "", operator: state.currentUser });
+  const [newProduct, setNewProduct] = useState({ name: "", lot: "", expiry: "", location: "", quantity: "" });
+  const [newNc, setNewNc] = useState({ title: "", severity: "Media", action: "", operator: state.currentUser });
+  const [newTask, setNewTask] = useState({ title: "", area: "Cucina", frequency: "Giornaliera", critical: false });
+  const [newDocument, setNewDocument] = useState({ name: "", type: "PDF", category: "Manuale", expiry: "" });
+  const [documentFile, setDocumentFile] = useState<File | null>(null);
+  const [newStaff, setNewStaff] = useState({ name: "", role: "", trainingExpiry: "" });
+  const [newSupplier, setNewSupplier] = useState({ name: "", category: "", phone: "", approved: true });
+
+useEffect(() => {
+  supabase.auth.getUser().then(({ data }) => {
+    setUser(data.user);
+  });
+
+  const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    setUser(session?.user ?? null);
+  });
+
+  return () => {
+    listener.subscription.unsubscribe();
+  };
+}, []);
+
+useEffect(() => {
+  const saved = loadState();
+  setState(saved);
+  setMounted(true);
+}, []);
+
+useEffect(() => {
+  if (mounted) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+}, [state, mounted]);
+
+async function loadTemperatures() {
+  if (!user) return;
+
+  const { data } = await supabase
+    .from("temperatures")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
+
+  if (data) {
+    patch((prev) => ({
+      ...prev,
+      temperatures: data.map((t) => ({
+        id: t.id,
+        area: t.area,
+        value: t.value,
+        operator: t.operator,
+        status: t.status,
+        date: new Date(t.created_at).toISOString().slice(0, 10),
+        time: new Date(t.created_at).toTimeString().slice(0, 5),
+        min: 0,
+        max: 4,
+      })),
+    }));
+  }
+}
+
+async function loadChecklist() {
+  if (!user) return;
+
+  const { data } = await supabase
+    .from("checklist_items")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
+
+  if (data) {
+    patch((prev) => ({
+      ...prev,
+      tasks: data.map((item) => ({
+        id: item.id,
+        title: item.title,
+        area: item.area,
+        frequency: item.frequency,
+        done: item.done,
+        critical: item.critical,
+        operator: item.operator || "",
+        date: new Date(item.created_at).toISOString().slice(0, 10),
+      })),
+    }));
+  }
+}
+
+useEffect(() => {
+  if (user) {
+    loadTemperatures();
+    loadChecklist();
+  }
+}, [user]);
+async function handleAuth() {
+  setAuthError("");
+
+  if (authMode === "register") {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+
+    if (error) {
+      setAuthError(error.message);
+      return;
+    }
+
+    if (data.user) {
+      await supabase.from("profiles").insert({
+        id: data.user.id,
+        email,
+        full_name: email,
+      });
+    }
+  } else {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      setAuthError(error.message);
+    }
+  }
+}
+
+async function logout() {
+  await supabase.auth.signOut();
+}
+
+  const openTasks = state.tasks.filter((task) => !task.done).length;
+  const alerts = state.temperatures.filter((temperature) => temperature.status === "alert").length + state.products.filter((product) => product.status !== "ok").length + state.nonConformities.filter((nonConformity) => nonConformity.status !== "Chiusa").length;
+  const progress = calculateProgress(state.tasks);
+  const filteredProducts = useMemo(() => filterProducts(state.products, query), [state.products, query]);
+  const expiringDocs = state.documents.filter((doc) => daysUntil(doc.expiry) <= 45).length;
+
+  function patch(updater) {
+    setState((prev) => typeof updater === "function" ? updater(prev) : { ...prev, ...updater });
+  }
+
+  async function toggleTask(id: number) {
+  const task = state.tasks.find((t) => t.id === id);
+  if (!task) return;
+
+  await supabase
+    .from("checklist_items")
+    .update({
+      done: !task.done,
+      operator: !task.done ? state.currentUser : "",
+    })
+    .eq("id", id)
+    .eq("user_id", user?.id);
+
+await loadChecklist();
+}
+    
+  async function addTask() {
+  if (!newTask.title.trim()) return;
+
+  await supabase.from("checklist_items").insert({
+    user_id: user?.id,
+    title: newTask.title.trim(),
+    area: newTask.area,
+    frequency: newTask.frequency,
+    critical: newTask.critical,
+    done: false,
+    operator: "",
+  });
+
+  await loadChecklist();
+
+  setNewTask({
+    title: "",
+    area: "Cucina",
+    frequency: "Giornaliera",
+    critical: false,
+  });
+}
+
+  
+async function addTemperature() {
+  const value = Number(newTemp.value);
+  if (!newTemp.area.trim() || Number.isNaN(value)) return;
+
+  const status = getTemperatureStatus(newTemp.area, value, state.restaurant);
+
+  patch((prev) => {
+    const range = getTemperatureRange(newTemp.area, prev.restaurant);
+
+    const entry = {
+      id: Date.now(),
+      area: newTemp.area.trim(),
+      value,
+      min: range.min,
+      max: range.max,
+      date: today,
+      time: getTime(),
+      operator: newTemp.operator.trim() || prev.currentUser,
+      status,
+    };
+
+    const nonConformity =
+      status === "alert"
+        ? [
+            {
+              id: Date.now() + 1,
+              title: `${entry.area} fuori soglia`,
+              severity: "Media",
+              action:
+                "Verificare alimenti, ripetere misurazione e controllare attrezzatura",
+              status: "Aperta",
+              date: today,
+              operator: entry.operator,
+            },
+          ]
+        : [];
+
+    return {
+      ...prev,
+      temperatures: [entry, ...prev.temperatures],
+      nonConformities: [...nonConformity, ...prev.nonConformities],
+    };
+  });
+
+  const { data, error } = await supabase.from("temperatures").insert({
+  area: newTemp.area.trim(),
+  value,
+  operator: newTemp.operator.trim() || state.currentUser,
+  status,
+  user_id: user?.id,
+});
+
+  console.log("Supabase data:", data);
+  console.log("Supabase error:", error);
+  
+  await loadTemperatures();
+
+  setNewTemp({ area: "", value: "", operator: state.currentUser });
+}
+
+  function addProduct() {
+    if (!newProduct.name.trim() || !newProduct.expiry) return;
+    patch((prev) => ({ ...prev, products: [{ id: Date.now(), ...newProduct, name: newProduct.name.trim(), opened: false, status: getProductStatus(newProduct.expiry) }, ...prev.products] }));
+    setNewProduct({ name: "", lot: "", expiry: "", location: "", quantity: "" });
+  }
+
+ async function addDocument() {
+  if (!newDocument.name.trim() || !documentFile) return;
+
+  const fileName = `${Date.now()}-${documentFile.name}`;
+
+  const { data, error } = await supabase.storage
+    .from("documents")
+    .upload(fileName, documentFile);
+
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  const fileUrl = supabase.storage
+    .from("documents")
+    .getPublicUrl(fileName).data.publicUrl;
+
+  patch((prev) => ({
+    ...prev,
+    documents: [
+      {
+        id: Date.now(),
+        ...newDocument,
+        name: newDocument.name.trim(),
+        uploadedAt: today,
+        url: fileUrl,
+      },
+      ...prev.documents,
+    ],
+  }));
+
+  setNewDocument({
+    name: "",
+    type: "PDF",
+    category: "Manuale",
+    expiry: "",
+  });
+
+  setDocumentFile(null);
+}
+
+  function addNonConformity() {
+    if (!newNc.title.trim()) return;
+    patch((prev) => ({ ...prev, nonConformities: [{ id: Date.now(), ...newNc, title: newNc.title.trim(), status: "Aperta", date: today }, ...prev.nonConformities] }));
+    setNewNc({ title: "", severity: "Media", action: "", operator: state.currentUser });
+  }
+
+  function closeNonConformity(id) {
+    patch((prev) => ({ ...prev, nonConformities: prev.nonConformities.map((n) => n.id === id ? { ...n, status: "Chiusa" } : n) }));
+  }
+
+  function addStaff() {
+    if (!newStaff.name.trim()) return;
+    patch((prev) => ({ ...prev, staff: [{ id: Date.now(), ...newStaff, active: true }, ...prev.staff] }));
+    setNewStaff({ name: "", role: "", trainingExpiry: "" });
+  }
+
+  function addSupplier() {
+    if (!newSupplier.name.trim()) return;
+    patch((prev) => ({ ...prev, suppliers: [{ id: Date.now(), ...newSupplier }, ...prev.suppliers] }));
+    setNewSupplier({ name: "", category: "", phone: "", approved: true });
+  }
+
+  function removeFrom(collection, id) {
+    patch((prev) => ({ ...prev, [collection]: prev[collection].filter((item) => item.id !== id) }));
+  }
+
+  function createReport(type) {
+    const html = generateReportHtml(state, type);
+    const filename = `${type}-${today}.html`;
+    downloadTextFile(filename, html);
+    patch((prev) => ({ ...prev, reports: [{ id: Date.now(), type, filename, createdAt: new Date().toISOString(), generatedBy: prev.currentUser }, ...prev.reports] }));
+  }
+
+  function exportBackup() {
+    downloadTextFile(`haccp-backup-${today}.json`, JSON.stringify(state, null, 2), "application/json");
+  }
+
+  function resetDemo() {
+    if (confirm("Vuoi davvero ripristinare i dati demo?")) setState(clone(defaultState));
+  }
+
+  const pages = [
+    ["dashboard", "dashboard", "Dashboard"], ["checklist", "clipboard", "Checklist"], ["temperature", "temp", "Temperature"], ["magazzino", "package", "Magazzino"], ["documenti", "document", "Documenti"], ["nonconformita", "alert", "Non conformità"], ["fornitori", "supplier", "Fornitori"], ["report", "report", "Report"], ["team", "team", "Team"], ["settings", "settings", "Impostazioni"],
+  ];
+
+if (!mounted) {
+  return <div className="p-8">Caricamento...</div>;
+}
+
+if (!user) {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 p-6">
+      <div className="w-full max-w-md rounded-3xl bg-white p-8 shadow-sm">
+        <h1 className="text-2xl font-bold">HACCP Easy</h1>
+        <p className="mt-2 text-sm text-slate-500">
+          Accedi per gestire il tuo ristorante.
+        </p>
+
+        <div className="mt-6 space-y-3">
+          <input
+            className="w-full rounded-2xl border border-slate-200 px-4 py-3"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+
+          <input
+            className="w-full rounded-2xl border border-slate-200 px-4 py-3"
+            placeholder="Password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+
+          {authError && (
+            <p className="text-sm text-rose-600">{authError}</p>
+          )}
+
+          <button
+            className="w-full rounded-2xl bg-slate-900 px-4 py-3 font-semibold text-white"
+            onClick={handleAuth}
+          >
+            {authMode === "login" ? "Accedi" : "Registrati"}
+          </button>
+
+          <button
+            className="w-full rounded-2xl bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-700"
+            onClick={() =>
+              setAuthMode(authMode === "login" ? "register" : "login")
+            }
+          >
+            {authMode === "login"
+              ? "Non hai un account? Registrati"
+              : "Hai già un account? Accedi"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-900">
+      <div className="grid min-h-screen lg:grid-cols-[280px_1fr]">
+        <aside className="border-r border-slate-200 bg-white p-5">
+          <div className="mb-8 flex items-center gap-3"><div className="rounded-2xl bg-slate-900 p-3 text-white"><Icon name="shield" className="text-xl" /></div><div><h1 className="text-lg font-bold">HACCP Easy</h1><p className="text-xs text-slate-500">{state.restaurant.name}</p></div></div>
+          <nav className="space-y-2">{pages.map(([key, icon, label]) => <NavButton key={key} active={page === key} icon={icon} label={label} onClick={() => setPage(key)} />)}</nav>
+        </aside>
+
+        <main className="p-5 md:p-8">
+          {page === "dashboard" && <>
+            <SectionTitle
+  title="Cosa devo controllare oggi"
+  subtitle="Vista operativa per cucina, sala, magazzino e responsabile HACCP."
+  action={
+    <div className="flex gap-2">
+      <Button
+        variant="secondary"
+        onClick={logout}
+      >
+        Logout
+      </Button>
+
+      <Button onClick={() => setPage("checklist")}>
+        <Icon name="plus" className="mr-2" />
+        Nuovo controllo
+      </Button>
+    </div>
+  }
+/>
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5"><StatCard icon="clipboard" label="Completamento" value={`${progress}%`} helper="Checklist del giorno" tone="bg-emerald-50" /><StatCard icon="alert" label="Alert attivi" value={alerts} helper="Richiedono verifica" tone="bg-rose-50" /><StatCard icon="calendar" label="Attività aperte" value={openTasks} helper="Da completare oggi" tone="bg-amber-50" /><StatCard icon="fridge" label="Temperature" value={state.temperatures.length} helper="Rilevazioni salvate" tone="bg-blue-50" /><StatCard icon="document" label="Doc. in scadenza" value={expiringDocs} helper="Entro 45 giorni" tone="bg-purple-50" /></div>
+            <div className="mt-6 grid gap-5 xl:grid-cols-[1.25fr_.75fr]"><Card><div className="p-5"><h3 className="mb-4 text-lg font-bold">Checklist di oggi</h3><div className="space-y-3">{state.tasks.slice(0, 6).map((task) => <div key={task.id} className="flex items-center justify-between rounded-2xl bg-slate-50 p-4"><div className="flex items-center gap-3"><button onClick={() => toggleTask(task.id)}><span className={cx("text-2xl", task.done ? "opacity-100" : "opacity-25")}>✅</span></button><div><p className="font-medium">{task.title}</p><p className="text-xs text-slate-500">{task.area} · {task.frequency} · {task.operator || "non firmato"}</p></div></div>{task.critical && <Badge tone="danger">CCP</Badge>}</div>)}</div></div></Card><Card><div className="p-5"><h3 className="mb-4 text-lg font-bold">Alert prioritari</h3><div className="space-y-3">{state.temperatures.filter((t) => t.status === "alert").slice(0, 3).map((t) => <div key={t.id} className="rounded-2xl bg-rose-50 p-4"><div className="flex items-center justify-between"><p className="font-medium text-rose-900">{t.area}</p><Badge tone="danger">{t.value}°C</Badge></div><p className="mt-1 text-sm text-rose-700">Temperatura fuori range.</p></div>)}{state.products.filter((p) => p.status !== "ok").slice(0, 3).map((p) => <div key={p.id} className="rounded-2xl bg-amber-50 p-4"><p className="font-medium text-amber-900">{p.name}</p><p className="mt-1 text-sm text-amber-700">Scadenza: {p.expiry} · Lotto {p.lot}</p></div>)}{alerts === 0 && <p className="text-sm text-slate-500">Nessun alert attivo.</p>}</div></div></Card></div>
+          </>}
+
+          {page === "checklist" && <><SectionTitle title="Checklist operative" subtitle="Crea, firma e completa i controlli giornalieri, settimanali e mensili." /><Card className="mb-5"><div className="grid gap-3 p-5 md:grid-cols-[1.5fr_1fr_1fr_auto_auto]"><TextInput placeholder="Nuovo controllo" value={newTask.title} onChange={(e) => setNewTask({ ...newTask, title: e.target.value })} /><TextInput placeholder="Area" value={newTask.area} onChange={(e) => setNewTask({ ...newTask, area: e.target.value })} /><SelectInput value={newTask.frequency} onChange={(e) => setNewTask({ ...newTask, frequency: e.target.value })}><option>Giornaliera</option><option>Settimanale</option><option>Mensile</option><option>Quando necessario</option></SelectInput><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={newTask.critical} onChange={(e) => setNewTask({ ...newTask, critical: e.target.checked })} />CCP</label><Button onClick={addTask}>Aggiungi</Button></div></Card><div className="grid gap-4 md:grid-cols-2">{state.tasks.map((task) => <Card key={task.id}><div className="flex items-center justify-between gap-4 p-5"><div><p className="font-bold">{task.title}</p><p className="mt-1 text-sm text-slate-500">{task.area} · {task.frequency} · {task.operator || "non firmato"}</p><div className="mt-2 flex gap-2">{task.critical && <Badge tone="danger">CCP</Badge>}<Badge tone={task.done ? "ok" : "warn"}>{task.done ? "Completata" : "Aperta"}</Badge></div></div><div className="flex gap-2"><Button variant={task.done ? "secondary" : "default"} onClick={() => toggleTask(task.id)}>{task.done ? "Riapri" : "Firma"}</Button><Button variant="secondary" onClick={() => removeFrom("tasks", task.id)}><Icon name="trash" /></Button></div></div></Card>)}</div></>}
+
+          {page === "temperature" && <><SectionTitle title="Registro temperature" subtitle="Gli sforamenti generano automaticamente una non conformità." /><Card className="mb-5"><div className="grid gap-3 p-5 md:grid-cols-[1fr_1fr_1fr_auto]"><TextInput placeholder="Area, es. Frigo pesce" value={newTemp.area} onChange={(e) => setNewTemp({ ...newTemp, area: e.target.value })} /><TextInput placeholder="Temperatura °C" value={newTemp.value} onChange={(e) => setNewTemp({ ...newTemp, value: e.target.value })} /><TextInput placeholder="Operatore" value={newTemp.operator} onChange={(e) => setNewTemp({ ...newTemp, operator: e.target.value })} /><Button onClick={addTemperature}>Aggiungi</Button></div></Card><div className="space-y-3">{state.temperatures.map((t) => <Card key={t.id}><div className="flex flex-col gap-3 p-5 md:flex-row md:items-center md:justify-between"><div><p className="font-bold">{t.area}</p><p className="text-sm text-slate-500">{t.date} · {t.time} · {t.operator} · Range {t.min}/{t.max}°C</p></div><div className="flex items-center gap-3"><span className="text-2xl font-bold">{t.value}°C</span><Badge tone={t.status === "ok" ? "ok" : "danger"}>{t.status === "ok" ? "OK" : "Fuori range"}</Badge><Button variant="secondary" onClick={() => removeFrom("temperatures", t.id)}><Icon name="trash" /></Button></div></div></Card>)}</div></>}
+
+          {page === "magazzino" && <><SectionTitle title="Magazzino e scadenze" subtitle="Gestione lotti, FIFO, prodotti aperti e scadenze." /><Card className="mb-5"><div className="grid gap-3 p-5 md:grid-cols-[1fr_1fr_1fr_1fr_1fr_auto]"><TextInput placeholder="Prodotto" value={newProduct.name} onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })} /><TextInput placeholder="Lotto" value={newProduct.lot} onChange={(e) => setNewProduct({ ...newProduct, lot: e.target.value })} /><TextInput type="date" value={newProduct.expiry} onChange={(e) => setNewProduct({ ...newProduct, expiry: e.target.value })} /><TextInput placeholder="Posizione" value={newProduct.location} onChange={(e) => setNewProduct({ ...newProduct, location: e.target.value })} /><TextInput placeholder="Quantità" value={newProduct.quantity} onChange={(e) => setNewProduct({ ...newProduct, quantity: e.target.value })} /><Button onClick={addProduct}>Aggiungi</Button></div></Card><div className="mb-5 flex items-center gap-3 rounded-3xl bg-white p-4 shadow-sm"><Icon name="search" /><input className="w-full outline-none" placeholder="Cerca prodotto, lotto o posizione" value={query} onChange={(e) => setQuery(e.target.value)} /></div><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{filteredProducts.map((p) => <Card key={p.id}><div className="p-5"><div className="flex items-start justify-between"><div><p className="font-bold">{p.name}</p><p className="text-sm text-slate-500">Lotto {p.lot}</p></div><Badge tone={p.status === "ok" ? "ok" : p.status === "critico" ? "danger" : "warn"}>{p.status === "ok" ? "OK" : p.status === "critico" ? "Critico" : "In scadenza"}</Badge></div><p className="mt-4 text-sm">Scadenza: <b>{p.expiry}</b></p><p className="text-sm text-slate-500">Posizione: {p.location} · Quantità: {p.quantity || "-"}</p><div className="mt-4"><Button variant="secondary" onClick={() => removeFrom("products", p.id)}><Icon name="trash" className="mr-2" />Elimina</Button></div></div></Card>)}</div></>}
+
+          {page === "documenti" && (
+  <>
+    <SectionTitle
+      title="Archivio documenti"
+      subtitle="Manuale HACCP, attestati, schede tecniche, analisi e contratti."
+    />
+
+    <Card className="mb-5">
+      <div className="grid gap-3 p-5 md:grid-cols-[1.5fr_1fr_1fr_1fr_1fr_auto]">
+        <TextInput
+          placeholder="Nome documento"
+          value={newDocument.name}
+          onChange={(e) =>
+            setNewDocument({ ...newDocument, name: e.target.value })
+          }
+        />
+
+        <SelectInput
+          value={newDocument.category}
+          onChange={(e) =>
+            setNewDocument({ ...newDocument, category: e.target.value })
+          }
+        >
+          <option>Manuale</option>
+          <option>Formazione</option>
+          <option>Infestanti</option>
+          <option>Analisi</option>
+          <option>Scheda tecnica</option>
+        </SelectInput>
+
+        <TextInput
+          placeholder="Tipo"
+          value={newDocument.type}
+          onChange={(e) =>
+            setNewDocument({ ...newDocument, type: e.target.value })
+          }
+        />
+
+        <TextInput
+          type="date"
+          value={newDocument.expiry}
+          onChange={(e) =>
+            setNewDocument({ ...newDocument, expiry: e.target.value })
+          }
+        />
+
+        <input
+          type="file"
+          onChange={(e) =>
+            setDocumentFile(e.target.files?.[0] || null)
+          }
+        />
+
+        <Button onClick={addDocument}>Archivia</Button>
+      </div>
+    </Card>
+
+    <div className="space-y-3">
+      {state.documents.map((doc) => (
+        <Card key={doc.id}>
+          <div className="flex items-center justify-between p-5">
+            <div className="flex items-center gap-3">
+              <Icon name="document" />
+
+              <div>
+                <p className="font-bold">{doc.name}</p>
+
+                {doc.url && (
+                  <a
+                    href={doc.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-sm text-blue-600 underline"
+                  >
+                    Apri documento
+                  </a>
+                )}
+
+                <p className="text-sm text-slate-500">
+                  {doc.category} · {doc.type} · Valido fino al {doc.expiry}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Badge tone={daysUntil(doc.expiry) <= 45 ? "warn" : "ok"}>
+                {daysUntil(doc.expiry)} giorni
+              </Badge>
+
+              <Button
+                variant="secondary"
+                onClick={() => removeFrom("documents", doc.id)}
+              >
+                <Icon name="trash" />
+              </Button>
+            </div>
+          </div>
+        </Card>
+      ))}
+    </div>
+  </>
+)}
+
+          {page === "nonconformita" && <><SectionTitle title="Non conformità" subtitle="Problemi rilevati, gravità, azioni correttive e chiusura." /><Card className="mb-5"><div className="grid gap-3 p-5 md:grid-cols-[1.3fr_.7fr_1.5fr_1fr_auto]"><TextInput placeholder="Problema" value={newNc.title} onChange={(e) => setNewNc({ ...newNc, title: e.target.value })} /><SelectInput value={newNc.severity} onChange={(e) => setNewNc({ ...newNc, severity: e.target.value })}><option>Bassa</option><option>Media</option><option>Alta</option></SelectInput><TextInput placeholder="Azione correttiva" value={newNc.action} onChange={(e) => setNewNc({ ...newNc, action: e.target.value })} /><TextInput placeholder="Operatore" value={newNc.operator} onChange={(e) => setNewNc({ ...newNc, operator: e.target.value })} /><Button onClick={addNonConformity}>Apri</Button></div></Card><div className="space-y-3">{state.nonConformities.map((n) => <Card key={n.id}><div className="p-5"><div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between"><div><p className="font-bold">{n.title}</p><p className="mt-1 text-sm text-slate-500">{n.date} · Gravità {n.severity} · {n.operator}</p><p className="mt-3 text-sm">Azione correttiva: {n.action}</p></div><div className="flex gap-2"><Badge tone={n.status === "Chiusa" ? "ok" : "danger"}>{n.status}</Badge>{n.status !== "Chiusa" && <Button variant="secondary" onClick={() => closeNonConformity(n.id)}>Chiudi</Button>}</div></div></div></Card>)}</div></>}
+
+          {page === "fornitori" && <><SectionTitle title="Fornitori qualificati" subtitle="Elenco fornitori, categorie e stato di approvazione." /><Card className="mb-5"><div className="grid gap-3 p-5 md:grid-cols-[1fr_1fr_1fr_auto_auto]"><TextInput placeholder="Nome fornitore" value={newSupplier.name} onChange={(e) => setNewSupplier({ ...newSupplier, name: e.target.value })} /><TextInput placeholder="Categoria" value={newSupplier.category} onChange={(e) => setNewSupplier({ ...newSupplier, category: e.target.value })} /><TextInput placeholder="Telefono" value={newSupplier.phone} onChange={(e) => setNewSupplier({ ...newSupplier, phone: e.target.value })} /><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={newSupplier.approved} onChange={(e) => setNewSupplier({ ...newSupplier, approved: e.target.checked })} />Approvato</label><Button onClick={addSupplier}>Aggiungi</Button></div></Card><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{state.suppliers.map((s) => <Card key={s.id}><div className="p-5"><div className="flex items-start justify-between"><div><p className="font-bold">{s.name}</p><p className="text-sm text-slate-500">{s.category} · {s.phone}</p></div><Badge tone={s.approved ? "ok" : "danger"}>{s.approved ? "Approvato" : "Non approvato"}</Badge></div></div></Card>)}</div></>}
+
+          {page === "report" && <><SectionTitle title="Report e archivio" subtitle="Genera file HTML stampabili in PDF e conserva lo storico report generati." action={<Button variant="secondary" onClick={exportBackup}><Icon name="save" className="mr-2" />Backup JSON</Button>} /><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">{[["temperature", "Registro temperature"], ["checklist", "Checklist giornaliere"], ["nonconformities", "Non conformità"], ["products", "Magazzino e scadenze"]].map(([type, label]) => <Card key={type}><div className="p-5"><p className="font-bold">{label}</p><p className="mt-1 text-sm text-slate-500">Genera file stampabile e salvabile in PDF.</p><Button className="mt-4" onClick={() => createReport(type)}><Icon name="print" className="mr-2" />Genera</Button></div></Card>)}</div><div className="mt-6 grid gap-5 xl:grid-cols-[1fr_1fr]"><Card><div className="p-5"><h3 className="mb-4 text-lg font-bold">Archivio report generati</h3><div className="space-y-2">{state.reports.length === 0 && <p className="text-sm text-slate-500">Nessun report generato.</p>}{state.reports.map((r) => <div key={r.id} className="flex items-center justify-between rounded-2xl bg-slate-50 p-3 text-sm"><div><p className="font-medium">{r.filename}</p><p className="text-xs text-slate-500">{new Date(r.createdAt).toLocaleString("it-IT")} · {r.generatedBy}</p></div><Badge tone="blue">{r.type}</Badge></div>)}</div></div></Card><Card><div className="p-5"><h3 className="mb-4 text-lg font-bold">Test interni</h3><div className="space-y-2">{selfTests.map((result) => <div key={result.name} className="flex items-center justify-between rounded-2xl bg-slate-50 px-3 py-2 text-sm"><span>{result.name}</span><Badge tone={result.passed ? "ok" : "danger"}>{result.passed ? "PASS" : "FAIL"}</Badge></div>)}</div></div></Card></div></>}
+
+          {page === "team" && <><SectionTitle title="Team e responsabilità" subtitle="Utenti, ruoli, firme digitali e formazione." /><Card className="mb-5"><div className="grid gap-3 p-5 md:grid-cols-[1fr_1fr_1fr_auto]"><TextInput placeholder="Nome" value={newStaff.name} onChange={(e) => setNewStaff({ ...newStaff, name: e.target.value })} /><TextInput placeholder="Ruolo" value={newStaff.role} onChange={(e) => setNewStaff({ ...newStaff, role: e.target.value })} /><TextInput type="date" value={newStaff.trainingExpiry} onChange={(e) => setNewStaff({ ...newStaff, trainingExpiry: e.target.value })} /><Button onClick={addStaff}>Aggiungi</Button></div></Card><div className="grid gap-4 md:grid-cols-3">{state.staff.map((person) => <Card key={person.id}><div className="p-5"><p className="font-bold">{person.name}</p><p className="text-sm text-slate-500">{person.role}</p><p className="mt-2 text-sm">Formazione: {person.trainingExpiry}</p><div className="mt-3"><Badge tone={daysUntil(person.trainingExpiry) <= 45 ? "warn" : "ok"}>{daysUntil(person.trainingExpiry) <= 45 ? "Formazione in scadenza" : "Attivo"}</Badge></div></div></Card>)}</div></>}
+
+          {page === "settings" && <><SectionTitle title="Impostazioni ristorante" subtitle="Configura attività, soglie HACCP e dati locali." action={<Button variant="danger" onClick={resetDemo}>Reset demo</Button>} /><Card><div className="space-y-4 p-5"><div className="grid gap-4 md:grid-cols-2"><div><label className="text-sm font-medium">Nome attività</label><TextInput className="mt-2" value={state.restaurant.name} onChange={(e) => patch((prev) => ({ ...prev, restaurant: { ...prev.restaurant, name: e.target.value } }))} /></div><div><label className="text-sm font-medium">Responsabile HACCP</label><TextInput className="mt-2" value={state.restaurant.haccpManager} onChange={(e) => patch((prev) => ({ ...prev, restaurant: { ...prev.restaurant, haccpManager: e.target.value } }))} /></div><div><label className="text-sm font-medium">Indirizzo</label><TextInput className="mt-2" value={state.restaurant.address} onChange={(e) => patch((prev) => ({ ...prev, restaurant: { ...prev.restaurant, address: e.target.value } }))} /></div><div><label className="text-sm font-medium">Utente corrente</label><TextInput className="mt-2" value={state.currentUser} onChange={(e) => patch({ currentUser: e.target.value })} /></div><div><label className="text-sm font-medium">Limite frigo positivo °C</label><TextInput className="mt-2" type="number" value={state.restaurant.fridgeLimit} onChange={(e) => patch((prev) => ({ ...prev, restaurant: { ...prev.restaurant, fridgeLimit: Number(e.target.value) } }))} /></div><div><label className="text-sm font-medium">Limite freezer °C</label><TextInput className="mt-2" type="number" value={state.restaurant.freezerLimit} onChange={(e) => patch((prev) => ({ ...prev, restaurant: { ...prev.restaurant, freezerLimit: Number(e.target.value) } }))} /></div></div><p className="text-sm text-slate-500">I dati sono salvati nel browser con localStorage. In produzione verranno salvati su Supabase con login, permessi e storage PDF.</p></div></Card></>}
+        </main>
+      </div>
+    </div>
+  );
+}
