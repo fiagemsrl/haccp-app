@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import type { User } from "@supabase/supabase-js";
 import SignatureCanvas from "react-signature-canvas";
+import { getCurrentOrganizationId } from "@/lib/getOrganization";
 import {
   LineChart,
   Line,
@@ -322,6 +323,7 @@ function SectionTitle({
 
 export default function HaccpRestaurantApp() {
   const [user, setUser] = useState<User | null>(null);
+  const [organization, setOrganization] = useState<any>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
@@ -341,19 +343,38 @@ export default function HaccpRestaurantApp() {
   const [newSupplier, setNewSupplier] = useState({ name: "", category: "", phone: "", approved: true });
 
 useEffect(() => {
-  supabase.auth.getUser().then(({ data }) => {
+  supabase.auth.getUser().then(async ({ data }) => {
     setUser(data.user);
+
+    if (data.user) {
+      const orgData = await getCurrentOrganizationId(
+        data.user.id
+      );
+
+      setOrganization(orgData);
+    }
   });
 
-  const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-    setUser(session?.user ?? null);
-  });
+  const { data: listener } =
+    supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        setUser(session?.user ?? null);
+
+        if (session?.user) {
+          const orgData =
+            await getCurrentOrganizationId(
+              session.user.id
+            );
+
+          setOrganization(orgData);
+        }
+      }
+    );
 
   return () => {
     listener.subscription.unsubscribe();
   };
 }, []);
-
 useEffect(() => {
   const saved = loadState();
   setState(saved);
@@ -367,12 +388,12 @@ useEffect(() => {
 }, [state, mounted]);
 
 async function loadTemperatures() {
-  if (!user) return;
+  if (!user || !organization) return;
 
   const { data } = await supabase
     .from("temperatures")
     .select("*")
-    .eq("user_id", user.id)
+    .eq("organization_id", organization.organization_id)
     .order("created_at", { ascending: false });
 
   if (data) {
@@ -394,18 +415,18 @@ async function loadTemperatures() {
 }
 
 async function loadChecklist() {
-  if (!user) return;
+  if (!user || !organization) return;
 
   const { data } = await supabase
     .from("checklist_items")
     .select("*")
-    .eq("user_id", user.id)
+    .eq("organization_id", organization.organization_id)
     .order("created_at", { ascending: false });
 
   if (data) {
     patch((prev: any) => ({
       ...prev,
-      tasks: data.map((item) => ({
+      tasks: data.map((item: any) => ({
         id: item.id,
         title: item.title,
         area: item.area,
@@ -418,13 +439,12 @@ async function loadChecklist() {
     }));
   }
 }
-
 useEffect(() => {
-  if (user) {
+  if (user && organization) {
     loadTemperatures();
     loadChecklist();
   }
-}, [user]);
+}, [user, organization]);
 async function handleAuth() {
   setAuthError("");
 
@@ -535,7 +555,8 @@ await loadChecklist();
   if (!newTask.title.trim()) return;
 
   await supabase.from("checklist_items").insert({
-    user_id: user?.id,
+  user_id: user?.id,
+  organization_id: organization.organization_id,
     title: newTask.title.trim(),
     area: newTask.area,
     frequency: newTask.frequency,
@@ -599,7 +620,9 @@ async function addTemperature() {
     };
   });
 
-  const { data, error } = await supabase.from("temperatures").insert({
+ const { data, error } = await supabase.from("temperatures").insert({
+  organization_id: organization.organization_id,
+  user_id: user?.id,
   area: newTemp.area.trim(),
   value,
   operator: newTemp.operator.trim() || state.currentUser,
