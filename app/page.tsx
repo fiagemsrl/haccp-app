@@ -871,7 +871,97 @@ if (!user) {
   }
 />
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5"><StatCard icon="clipboard" label="Completamento" value={`${progress}%`} helper="Checklist del giorno" tone="bg-emerald-50" /><StatCard icon="alert" label="Alert attivi" value={alerts} helper="Richiedono verifica" tone="bg-rose-50" /><StatCard icon="calendar" label="Attività aperte" value={openTasks} helper="Da completare oggi" tone="bg-amber-50" /><StatCard icon="fridge" label="Temperature" value={state.temperatures.length} helper="Rilevazioni salvate" tone="bg-blue-50" /><StatCard icon="document" label="Doc. in scadenza" value={expiringDocs} helper="Entro 45 giorni" tone="bg-purple-50" /></div>
-            <div className="mt-6 grid gap-5 xl:grid-cols-[1.25fr_.75fr]"><Card><div className="p-5"><h3 className="mb-4 text-lg font-bold">Checklist di oggi</h3><div className="space-y-3">{state.tasks.slice(0, 6).map((task: any) => <div key={task.id} className="flex items-center justify-between rounded-2xl bg-slate-50 p-4"><div className="flex items-center gap-3"><button onClick={() => toggleTask(task.id)}><span className={cx("text-2xl", task.done ? "opacity-100" : "opacity-25")}>✅</span></button><div><p className="font-medium">{task.title}</p><p className="text-xs text-slate-500">{task.area} · {task.frequency} · {task.operator || "non firmato"}</p></div></div>{task.critical && <Badge tone="danger">CCP</Badge>}</div>)}</div></div></Card><Card><div className="p-5"><h3 className="mb-4 text-lg font-bold">Alert prioritari</h3><div className="space-y-3">{state.temperatures.filter((t: any) => t.status === "alert").slice(0, 3).map((t: any) => <div key={t.id} className="rounded-2xl bg-rose-50 p-4"><div className="flex items-center justify-between"><p className="font-medium text-rose-900">{t.area}</p><Badge tone="danger">{t.value}°C</Badge></div><p className="mt-1 text-sm text-rose-700">Temperatura fuori range.</p></div>)}{state.products.filter((p: any) => p.status !== "ok").slice(0, 3).map((p: any) => <div key={p.id} className="rounded-2xl bg-amber-50 p-4"><p className="font-medium text-amber-900">{p.name}</p><p className="mt-1 text-sm text-amber-700">Scadenza: {p.expiry} · Lotto {p.lot}</p></div>)}{alerts === 0 && <p className="text-sm text-slate-500">Nessun alert attivo.</p>}</div></div></Card></div>
+            <div className="mt-6 grid gap-5 xl:grid-cols-[1.25fr_.75fr]"><Card><div className="p-5"><h3 className="mb-4 text-lg font-bold">Checklist di oggi</h3><div className="space-y-3">{state.tasks.slice(0, 6).map((task: any) => <div key={task.id} className="flex items-center justify-between rounded-2xl bg-slate-50 p-4"><div className="flex items-center gap-3"><button onClick={() => toggleTask(task.id)}><span className={cx("text-2xl", task.done ? "opacity-100" : "opacity-25")}>✅</span></button><div><p className="font-medium">{task.title}</p><p className="text-xs text-slate-500">{task.area} · {task.frequency} · {task.operator || "non firmato"}</p></div></div>{task.critical && <Badge tone="danger">CCP</Badge>}</div>)}</div></div></Card><Card><div className="p-5"><h3 className="mb-4 text-lg font-bold">Alert prioritari</h3><div className="space-y-3">{state.temperatures.filter((t: any) => t.status === "alert").slice(0, 3).map((t: any) => <div key={t.id} className="rounded-2xl bg-rose-50 p-4"><div className="flex items-center justify-between"><p className="font-medium text-rose-900">{t.area}</p><Badge tone="danger">{t.value}°C</Badge></div><p className="mt-1 text-sm text-rose-700">Temperatura fuori range.</p></div>)}{state.products.filter((p: any) => p.status !== "ok").slice(0, 3).map((p: any) => <div key={p.id} className="rounded-2xl bg-amber-50 p-4"><p className="font-medium text-amber-900">{p.name}</p><p className="mt-1 text-sm text-amber-700">Scadenza: {p.expiry} · Lotto {p.lot}</p></div>)}{alerts === 0 && <p className="text-sm text-slate-500">Nessun alert attivo.</p>}</div></div></Card></div><div className="mt-6 grid gap-6 lg:grid-cols-2">
+
+  <Card>
+    <div className="p-5">
+      <h3 className="mb-4 text-lg font-semibold">
+        Temperature ultime registrazioni
+      </h3>
+
+      <ResponsiveContainer width="100%" height={250}>
+        <LineChart data={temperatureChartData}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="date" />
+          <YAxis />
+          <Tooltip />
+          <Line
+            type="monotone"
+            dataKey="value"
+            stroke="#2563eb"
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  </Card>
+
+  <Card>
+    <div className="p-5">
+      <h3 className="mb-4 text-lg font-semibold">
+        Stato checklist
+      </h3>
+
+      <ResponsiveContainer width="100%" height={250}>
+        <PieChart>
+          <Pie
+            data={checklistChartData}
+            dataKey="value"
+            nameKey="name"
+            outerRadius={80}
+            label
+          >
+            <Cell fill="#10b981" />
+            <Cell fill="#ef4444" />
+          </Pie>
+          <Tooltip />
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
+  </Card>
+
+  <Card>
+    <div className="p-5">
+      <h3 className="mb-4 text-lg font-semibold">
+        Non conformità
+      </h3>
+
+      <ResponsiveContainer width="100%" height={250}>
+        <BarChart data={ncChartData}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="name" />
+          <YAxis />
+          <Tooltip />
+          <Bar
+            dataKey="value"
+            fill="#f59e0b"
+          />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  </Card>
+
+  <Card>
+    <div className="p-5">
+      <h3 className="mb-4 text-lg font-semibold">
+        Scadenza documenti
+      </h3>
+
+      <ResponsiveContainer width="100%" height={250}>
+        <BarChart data={documentChartData}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="name" />
+          <YAxis />
+          <Tooltip />
+          <Bar
+            dataKey="giorni"
+            fill="#3b82f6"
+          />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  </Card>
+
+</div>
           </>}
 
           {page === "checklist" && <><SectionTitle title="Checklist operative" subtitle="Crea, firma e completa i controlli giornalieri, settimanali e mensili." /><Card className="mb-5"><div className="grid gap-3 p-5 md:grid-cols-[1.5fr_1fr_1fr_auto_auto]"><TextInput placeholder="Nuovo controllo" value={newTask.title} onChange={(e) => setNewTask({ ...newTask, title: e.target.value })} /><TextInput placeholder="Area" value={newTask.area} onChange={(e) => setNewTask({ ...newTask, area: e.target.value })} /><SelectInput value={newTask.frequency} onChange={(e) => setNewTask({ ...newTask, frequency: e.target.value })}><option>Giornaliera</option><option>Settimanale</option><option>Mensile</option><option>Quando necessario</option></SelectInput><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={newTask.critical} onChange={(e) => setNewTask({ ...newTask, critical: e.target.checked })} />CCP</label><Button onClick={addTask}>Aggiungi</Button></div></Card><div className="grid gap-4 md:grid-cols-2">{state.tasks.map((task: any) => <Card key={task.id}><div className="flex items-center justify-between gap-4 p-5"><div><p className="font-bold">{task.title}</p><p className="mt-1 text-sm text-slate-500">{task.area} · {task.frequency} · {task.operator || "non firmato"}</p><div className="mt-2 flex gap-2">{task.critical && <Badge tone="danger">CCP</Badge>}<Badge tone={task.done ? "ok" : "warn"}>{task.done ? "Completata" : "Aperta"}</Badge></div></div><div className="flex gap-2"><Button variant={task.done ? "secondary" : "default"} onClick={() => toggleTask(task.id)}>{task.done ? "Riapri" : "Firma"}</Button><Button variant="secondary" onClick={() => removeFrom("tasks", task.id)}><Icon name="trash" /></Button></div></div></Card>)}</div></>}
