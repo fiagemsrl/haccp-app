@@ -376,10 +376,13 @@ useEffect(() => {
   };
 }, []);
 useEffect(() => {
-  const saved = loadState();
-  setState(saved);
+  if (user) {
+    const saved = loadState();
+    setState(saved);
+  }
+
   setMounted(true);
-}, []);
+}, [user]);
 
 useEffect(() => {
   if (mounted) {
@@ -632,7 +635,6 @@ async function addTemperature() {
   value,
   operator: newTemp.operator.trim() || state.currentUser,
   status,
-  user_id: user?.id,
 });
 
   console.log("Supabase data:", data);
