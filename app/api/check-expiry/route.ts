@@ -17,7 +17,7 @@ export async function GET() {
     const resend = new Resend(apiKey);
 
     await resend.emails.send({
-      from: "HACCP Easy <onboarding@resend.dev>",
+      from: "HACCP Easy <notifiche@domaristorante.it>",
       to: "fiagemsrl@gmail.com",
       subject: "Controllo HACCP automatico",
       html: `
