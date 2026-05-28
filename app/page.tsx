@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import type { User } from "@supabase/supabase-js";
+import SignatureCanvas from "react-signature-canvas";
 import {
   LineChart,
   Line,
@@ -20,6 +21,7 @@ import {
 
 const STORAGE_KEY = "haccp_easy_restaurant_app_v1";
 const today = new Date().toISOString().slice(0, 10);
+
 
 const defaultState = {
   restaurant: {
@@ -331,6 +333,7 @@ export default function HaccpRestaurantApp() {
   const [newTemp, setNewTemp] = useState({ area: "", value: "", operator: state.currentUser });
   const [newProduct, setNewProduct] = useState({ name: "", lot: "", expiry: "", location: "", quantity: "" });
   const [newNc, setNewNc] = useState({ title: "", severity: "Media", action: "", operator: state.currentUser });
+  const [ncPhoto, setNcPhoto] = useState<File | null>(null);
   const [newTask, setNewTask] = useState({ title: "", area: "Cucina", frequency: "Giornaliera", critical: false });
   const [newDocument, setNewDocument] = useState({ name: "", type: "PDF", category: "Manuale", expiry: "" });
   const [documentFile, setDocumentFile] = useState<File | null>(null);
@@ -660,12 +663,51 @@ async function addTemperature() {
   setDocumentFile(null);
 }
 
-  function addNonConformity() {
-    if (!newNc.title.trim()) return;
-    patch((prev: any) => ({ ...prev, nonConformities: [{ id: Date.now(), ...newNc, title: newNc.title.trim(), status: "Aperta", date: today }, ...prev.nonConformities] }));
-    setNewNc({ title: "", severity: "Media", action: "", operator: state.currentUser });
+async function addNonConformity() {
+  if (!newNc.title.trim()) return;
+
+  let photoUrl = "";
+
+  if (ncPhoto) {
+    const fileName = `${Date.now()}-${ncPhoto.name}`;
+
+    const { error } = await supabase.storage
+      .from("documents")
+      .upload(fileName, ncPhoto);
+
+    if (!error) {
+      photoUrl = supabase.storage
+        .from("documents")
+        .getPublicUrl(fileName).data.publicUrl;
+    }
   }
 
+  patch((prev: any) => ({
+    ...prev,
+    nonConformities: [
+      {
+        id: Date.now(),
+        ...newNc,
+        title: newNc.title.trim(),
+        status: "Aperta",
+        date: today,
+        photoUrl,
+      },
+      ...prev.nonConformities,
+    ],
+  }));
+
+  setNewNc({
+    title: "",
+    severity: "Media",
+    action: "",
+    operator: state.currentUser,
+  });
+
+  setNcPhoto(null);
+}
+
+  
   function closeNonConformity(id: number) {
     patch((prev: any) => ({ ...prev, nonConformities: prev.nonConformities.map((n: any) => n.id === id ? { ...n, status: "Chiusa" } : n) }));
   }
@@ -964,7 +1006,12 @@ if (!user) {
 </div>
           </>}
 
-          {page === "checklist" && <><SectionTitle title="Checklist operative" subtitle="Crea, firma e completa i controlli giornalieri, settimanali e mensili." /><Card className="mb-5"><div className="grid gap-3 p-5 md:grid-cols-[1.5fr_1fr_1fr_auto_auto]"><TextInput placeholder="Nuovo controllo" value={newTask.title} onChange={(e) => setNewTask({ ...newTask, title: e.target.value })} /><TextInput placeholder="Area" value={newTask.area} onChange={(e) => setNewTask({ ...newTask, area: e.target.value })} /><SelectInput value={newTask.frequency} onChange={(e) => setNewTask({ ...newTask, frequency: e.target.value })}><option>Giornaliera</option><option>Settimanale</option><option>Mensile</option><option>Quando necessario</option></SelectInput><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={newTask.critical} onChange={(e) => setNewTask({ ...newTask, critical: e.target.checked })} />CCP</label><Button onClick={addTask}>Aggiungi</Button></div></Card><div className="grid gap-4 md:grid-cols-2">{state.tasks.map((task: any) => <Card key={task.id}><div className="flex items-center justify-between gap-4 p-5"><div><p className="font-bold">{task.title}</p><p className="mt-1 text-sm text-slate-500">{task.area} · {task.frequency} · {task.operator || "non firmato"}</p><div className="mt-2 flex gap-2">{task.critical && <Badge tone="danger">CCP</Badge>}<Badge tone={task.done ? "ok" : "warn"}>{task.done ? "Completata" : "Aperta"}</Badge></div></div><div className="flex gap-2"><Button variant={task.done ? "secondary" : "default"} onClick={() => toggleTask(task.id)}>{task.done ? "Riapri" : "Firma"}</Button><Button variant="secondary" onClick={() => removeFrom("tasks", task.id)}><Icon name="trash" /></Button></div></div></Card>)}</div></>}
+          {page === "checklist" && <><SectionTitle title="Checklist operative" subtitle="Crea, firma e completa i controlli giornalieri, settimanali e mensili." /><Card className="mb-5"><div className="grid gap-3 p-5 md:grid-cols-[1.5fr_1fr_1fr_auto_auto]"><TextInput placeholder="Nuovo controllo" value={newTask.title} onChange={(e) => setNewTask({ ...newTask, title: e.target.value })} /><TextInput placeholder="Area" value={newTask.area} onChange={(e) => setNewTask({ ...newTask, area: e.target.value })} /><SelectInput value={newTask.frequency} onChange={(e) => setNewTask({ ...newTask, frequency: e.target.value })}><option>Giornaliera</option><option>Settimanale</option><option>Mensile</option><option>Quando necessario</option></SelectInput><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={newTask.critical} onChange={(e) => setNewTask({ ...newTask, critical: e.target.checked })} />CCP</label><Button onClick={addTask}>Aggiungi</Button></div></Card><div className="grid gap-4 md:grid-cols-2">{state.tasks.map((task: any) => <Card key={task.id}><div className="flex items-center justify-between gap-4 p-5"><div><p className="font-bold">{task.title}</p><p className="mt-1 text-sm text-slate-500">{task.area} · {task.frequency} · {task.operator || "non firmato"}</p><div className="mt-2 flex gap-2">{task.critical && <Badge tone="danger">CCP</Badge>}<Badge tone={task.done ? "ok" : "warn"}>{task.done ? "Completata" : "Aperta"}</Badge></div></div><div className="flex gap-2"><Button
+  variant={task.done ? "secondary" : "default"}
+  onClick={() => toggleTask(task.id)}
+>
+  {task.done ? "Riapri" : "Firma"}
+</Button><Button variant="secondary" onClick={() => removeFrom("tasks", task.id)}><Icon name="trash" /></Button></div></div></Card>)}</div></>}
 
           {page === "temperature" && <><SectionTitle title="Registro temperature" subtitle="Gli sforamenti generano automaticamente una non conformità." /><Card className="mb-5"><div className="grid gap-3 p-5 md:grid-cols-[1fr_1fr_1fr_auto]"><TextInput placeholder="Area, es. Frigo pesce" value={newTemp.area} onChange={(e) => setNewTemp({ ...newTemp, area: e.target.value })} /><TextInput placeholder="Temperatura °C" value={newTemp.value} onChange={(e) => setNewTemp({ ...newTemp, value: e.target.value })} /><TextInput placeholder="Operatore" value={newTemp.operator} onChange={(e) => setNewTemp({ ...newTemp, operator: e.target.value })} /><Button onClick={addTemperature}>Aggiungi</Button></div></Card><div className="space-y-3">{state.temperatures.map((t: any) => <Card key={t.id}><div className="flex flex-col gap-3 p-5 md:flex-row md:items-center md:justify-between"><div><p className="font-bold">{t.area}</p><p className="text-sm text-slate-500">{t.date} · {t.time} · {t.operator} · Range {t.min}/{t.max}°C</p></div><div className="flex items-center gap-3"><span className="text-2xl font-bold">{t.value}°C</span><Badge tone={t.status === "ok" ? "ok" : "danger"}>{t.status === "ok" ? "OK" : "Fuori range"}</Badge><Button variant="secondary" onClick={() => removeFrom("temperatures", t.id)}><Icon name="trash" /></Button></div></div></Card>)}</div></>}
 
@@ -1073,7 +1120,31 @@ if (!user) {
   </>
 )}
 
-          {page === "nonconformita" && <><SectionTitle title="Non conformità" subtitle="Problemi rilevati, gravità, azioni correttive e chiusura." /><Card className="mb-5"><div className="grid gap-3 p-5 md:grid-cols-[1.3fr_.7fr_1.5fr_1fr_auto]"><TextInput placeholder="Problema" value={newNc.title} onChange={(e) => setNewNc({ ...newNc, title: e.target.value })} /><SelectInput value={newNc.severity} onChange={(e) => setNewNc({ ...newNc, severity: e.target.value })}><option>Bassa</option><option>Media</option><option>Alta</option></SelectInput><TextInput placeholder="Azione correttiva" value={newNc.action} onChange={(e) => setNewNc({ ...newNc, action: e.target.value })} /><TextInput placeholder="Operatore" value={newNc.operator} onChange={(e) => setNewNc({ ...newNc, operator: e.target.value })} /><Button onClick={addNonConformity}>Apri</Button></div></Card><div className="space-y-3">{state.nonConformities.map((n: any) => <Card key={n.id}><div className="p-5"><div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between"><div><p className="font-bold">{n.title}</p><p className="mt-1 text-sm text-slate-500">{n.date} · Gravità {n.severity} · {n.operator}</p><p className="mt-3 text-sm">Azione correttiva: {n.action}</p></div><div className="flex gap-2"><Badge tone={n.status === "Chiusa" ? "ok" : "danger"}>{n.status}</Badge>{n.status !== "Chiusa" && <Button variant="secondary" onClick={() => closeNonConformity(n.id)}>Chiudi</Button>}</div></div></div></Card>)}</div></>}
+          {page === "nonconformita" && <><SectionTitle title="Non conformità" subtitle="Problemi rilevati, gravità, azioni correttive e chiusura." /><Card className="mb-5"><div className="grid gap-3 p-5 md:grid-cols-[1.3fr_.7fr_1.5fr_1fr_auto]"><TextInput placeholder="Problema" value={newNc.title} onChange={(e) => setNewNc({ ...newNc, title: e.target.value })} /><SelectInput value={newNc.severity} onChange={(e) => setNewNc({ ...newNc, severity: e.target.value })}><option>Bassa</option><option>Media</option><option>Alta</option></SelectInput><TextInput placeholder="Azione correttiva" value={newNc.action} onChange={(e) => setNewNc({ ...newNc, action: e.target.value })} /><TextInput
+  placeholder="Operatore"
+  value={newNc.operator}
+  onChange={(e) =>
+    setNewNc({ ...newNc, operator: e.target.value })
+  }
+/>
+
+<input
+  type="file"
+  accept="image/*"
+  onChange={(e) =>
+    setNcPhoto(e.target.files?.[0] || null)
+  }
+/>
+
+<Button onClick={addNonConformity}>
+  Apri
+</Button></div></Card><div className="space-y-3">{state.nonConformities.map((n: any) => <Card key={n.id}><div className="p-5"><div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between"><div><p className="font-bold">{n.title}</p><p className="mt-1 text-sm text-slate-500">{n.date} · Gravità {n.severity} · {n.operator}</p><p className="mt-3 text-sm">Azione correttiva: {n.action}</p>{n.photoUrl && (
+  <img
+    src={n.photoUrl}
+    alt="Non conformità"
+    className="mt-4 h-40 w-full rounded-2xl object-cover"
+  />
+)}</div><div className="flex gap-2"><Badge tone={n.status === "Chiusa" ? "ok" : "danger"}>{n.status}</Badge>{n.status !== "Chiusa" && <Button variant="secondary" onClick={() => closeNonConformity(n.id)}>Chiudi</Button>}</div></div></div></Card>)}</div></>}
 
           {page === "fornitori" && <><SectionTitle title="Fornitori qualificati" subtitle="Elenco fornitori, categorie e stato di approvazione." /><Card className="mb-5"><div className="grid gap-3 p-5 md:grid-cols-[1fr_1fr_1fr_auto_auto]"><TextInput placeholder="Nome fornitore" value={newSupplier.name} onChange={(e) => setNewSupplier({ ...newSupplier, name: e.target.value })} /><TextInput placeholder="Categoria" value={newSupplier.category} onChange={(e) => setNewSupplier({ ...newSupplier, category: e.target.value })} /><TextInput placeholder="Telefono" value={newSupplier.phone} onChange={(e) => setNewSupplier({ ...newSupplier, phone: e.target.value })} /><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={newSupplier.approved} onChange={(e) => setNewSupplier({ ...newSupplier, approved: e.target.checked })} />Approvato</label><Button onClick={addSupplier}>Aggiungi</Button></div></Card><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{state.suppliers.map((s: any) => <Card key={s.id}><div className="p-5"><div className="flex items-start justify-between"><div><p className="font-bold">{s.name}</p><p className="text-sm text-slate-500">{s.category} · {s.phone}</p></div><Badge tone={s.approved ? "ok" : "danger"}>{s.approved ? "Approvato" : "Non approvato"}</Badge></div></div></Card>)}</div></>}
 
