@@ -1,13 +1,24 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
+    const apiKey = process.env.RESEND_API_KEY;
+
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: "RESEND_API_KEY mancante" },
+        { status: 500 }
+      );
+    }
+
+    const resend = new Resend(apiKey);
+
     await resend.emails.send({
       from: "HACCP Easy <onboarding@resend.dev>",
-      to: "TUAMAIL@gmail.com",
+      to: "fiagemsrl@gmail.com",
       subject: "Controllo HACCP automatico",
       html: `
         <h2>HACCP Easy</h2>
@@ -17,6 +28,9 @@ export async function GET() {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    return NextResponse.json({ error });
+    return NextResponse.json(
+      { error: String(error) },
+      { status: 500 }
+    );
   }
 }
