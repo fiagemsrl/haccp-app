@@ -482,15 +482,20 @@ async function handleAuth() {
 }
 
 async function logout() {
-  await supabase.auth.signOut();
+  await supabase.auth.signOut({
+    scope: "global",
+  });
+
+  localStorage.clear();
+  sessionStorage.clear();
 
   setUser(null);
   setOrganization(null);
 
-  localStorage.removeItem(STORAGE_KEY);
   setState(clone(defaultState));
-}
-  const openTasks = state.tasks.filter((task: any) => !task.done).length;
+
+  window.location.href = "/";
+}  const openTasks = state.tasks.filter((task: any) => !task.done).length;
 
 const alerts =
   state.temperatures.filter((temperature: any) => temperature.status === "alert").length +
