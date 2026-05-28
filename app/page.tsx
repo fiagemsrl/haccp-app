@@ -3,6 +3,20 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import type { User } from "@supabase/supabase-js";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+  CartesianGrid,
+} from "recharts";
 
 const STORAGE_KEY = "haccp_easy_restaurant_app_v1";
 const today = new Date().toISOString().slice(0, 10);
@@ -454,6 +468,43 @@ const alerts =
   const progress = calculateProgress(state.tasks);
   const filteredProducts = useMemo(() => filterProducts(state.products, query), [state.products, query]);
   const expiringDocs = state.documents.filter((doc: any) => daysUntil(doc.expiry) <= 45).length;
+const temperatureChartData = state.temperatures
+  .slice(-7)
+  .map((t: any) => ({
+    date: t.date,
+    value: Number(t.value),
+  }));
+
+const checklistChartData = [
+  {
+    name: "Completate",
+    value: state.tasks.filter((t: any) => t.done).length,
+  },
+  {
+    name: "Aperte",
+    value: state.tasks.filter((t: any) => !t.done).length,
+  },
+];
+
+const ncChartData = [
+  {
+    name: "Critiche",
+    value: state.nonConformities.filter(
+      (n: any) => n.severity === "Alta"
+    ).length,
+  },
+  {
+    name: "Normali",
+    value: state.nonConformities.filter(
+      (n: any) => n.severity !== "Alta"
+    ).length,
+  },
+];
+
+const documentChartData = state.documents.map((d: any) => ({
+  name: d.name.slice(0, 10),
+  giorni: daysUntil(d.expiry),
+}));
 
   function patch(updater: any) {
     setState((prev: any) =>
