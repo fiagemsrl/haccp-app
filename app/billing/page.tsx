@@ -1,19 +1,23 @@
 "use client";
 
 export default function BillingPage() {
-  async function checkout(priceId: string) {
-    const res = await fetch("/api/create-checkout", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ priceId }),
-    });
+  async function checkout(priceId: string, plan: string) {
+  const res = await fetch("/api/create-checkout", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      priceId,
+      plan,
+      organizationId: localStorage.getItem("organization_id"),
+    }),
+  });
 
-    const data = await res.json();
+  const data = await res.json();
 
-    window.location.href = data.url;
-  }
+  window.location.href = data.url;
+}
 
   return (
     <div className="min-h-screen bg-slate-50 p-8">
@@ -55,7 +59,7 @@ export default function BillingPage() {
             </ul>
 
             <button
-              onClick={() => checkout("price_1TcAzlJP68OUTShqnLWst6mF")}
+              onClick={() => checkout("price_1TcAzlJP68OUTShqnLWst6mF","starter")}
               className="mt-8 w-full rounded-2xl bg-slate-900 px-4 py-3 font-semibold text-white"
             >
               Attiva piano
@@ -92,7 +96,7 @@ export default function BillingPage() {
             </ul>
 
             <button
-              onClick={() => checkout("price_1TcB0FJP68OUTShqJ1DOan5j")}
+              onClick={() => checkout("price_1TcB0FJP68OUTShqJ1DOan5j","pro")}
               className="mt-8 w-full rounded-2xl bg-blue-600 px-4 py-3 font-semibold text-white"
             >
               Attiva piano
@@ -125,7 +129,7 @@ export default function BillingPage() {
             </ul>
 
             <button
-              onClick={() => checkout("price_1TcB0cJP68OUTShq4EFrUz3r")}
+              onClick={() => checkout("price_1TcB0cJP68OUTShq4EFrUz3r","enterprise")}
               className="mt-8 w-full rounded-2xl bg-slate-900 px-4 py-3 font-semibold text-white"
             >
               Attiva piano

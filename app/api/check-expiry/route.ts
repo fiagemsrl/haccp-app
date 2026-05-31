@@ -1,36 +1,33 @@
 import { NextResponse } from "next/server";
-import { Resend } from "resend";
+import Stripe from "stripe";
 
-export const dynamic = "force-dynamic";
+export async function POST(req: Request) {
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
-export async function GET() {
-  try {
-    const apiKey = process.env.RESEND_API_KEY;
+  const { priceId, organizationId, plan } = await req.json();
 
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: "RESEND_API_KEY mancante" },
-        { status: 500 }
-      );
-    }
+  const session = await stripe.checkout.sessions.create({
+    mode: "subscription",
+    payment_method_types: ["card"],
+    line_items: [
+      {
+        price: priceId,
+        quantity: 1,
+      },
+    ],
+    metadata: {
+      organization_id: organizationId,
+      plan,
+    },
+    subscription_data: {
+      metadata: {
+        organization_id: organizationId,
+        plan,
+      },
+    },
+    success_url: `${process.env.NEXT_PUBLIC_APP_URL}/billing?success=true`,
+    cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/billing?canceled=true`,
+  });
 
-    const resend = new Resend(apiKey);
-
-    await resend.emails.send({
-      from: "HACCP Easy <notifiche@domaristorante.it>",
-      to: "fiagemsrl@gmail.com",
-      subject: "Controllo HACCP automatico",
-      html: `
-        <h2>HACCP Easy</h2>
-        <p>Ci sono documenti o controlli in scadenza.</p>
-      `,
-    });
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    return NextResponse.json(
-      { error: String(error) },
-      { status: 500 }
-    );
-  }
+  return NextResponse.json({ url: session.url });
 }

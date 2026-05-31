@@ -361,12 +361,11 @@ useEffect(() => {
       setOrganization(orgData);
 
       if (orgData?.organization_id) {
-        const details = await getOrganizationDetails(
-          orgData.organization_id
-        );
-
-        setOrganizationData(details);
-      }
+  localStorage.setItem(
+    "organization_id",
+    orgData.organization_id
+  );
+}
     }
   });
 
