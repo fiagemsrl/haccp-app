@@ -14,3 +14,20 @@ export async function getCurrentOrganizationId(userId: string) {
 
   return data;
 }
+
+export async function getOrganizationDetails(
+  organizationId: string
+) {
+  const { data, error } = await supabase
+    .from("organizations")
+    .select("*")
+    .eq("id", organizationId)
+    .single();
+
+  if (error) {
+    console.error("Organization details error:", error);
+    return null;
+  }
+
+  return data;
+}

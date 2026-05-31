@@ -4,8 +4,10 @@ import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import type { User } from "@supabase/supabase-js";
 import SignatureCanvas from "react-signature-canvas";
-import { getCurrentOrganizationId } from "@/lib/getOrganization";
 import {
+  getCurrentOrganizationId,
+  getOrganizationDetails,
+} from "@/lib/getOrganization";import {
   LineChart,
   Line,
   XAxis,
@@ -324,6 +326,8 @@ function SectionTitle({
 export default function HaccpRestaurantApp() {
   const [user, setUser] = useState<User | null>(null);
   const [organization, setOrganization] = useState<any>(null);
+  const [organizationData, setOrganizationData] =
+  useState<any>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
@@ -352,29 +356,41 @@ useEffect(() => {
     setUser(data.user);
 
     if (data.user) {
-      const orgData = await getCurrentOrganizationId(
-        data.user.id
-      );
+      const orgData = await getCurrentOrganizationId(data.user.id);
 
       setOrganization(orgData);
+
+      if (orgData?.organization_id) {
+        const details = await getOrganizationDetails(
+          orgData.organization_id
+        );
+
+        setOrganizationData(details);
+      }
     }
   });
 
-  const { data: listener } =
-    supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        setUser(session?.user ?? null);
+  const { data: listener } = supabase.auth.onAuthStateChange(
+    async (_event, session) => {
+      setUser(session?.user ?? null);
 
-        if (session?.user) {
-          const orgData =
-            await getCurrentOrganizationId(
-              session.user.id
-            );
+      if (session?.user) {
+        const orgData = await getCurrentOrganizationId(
+          session.user.id
+        );
 
-          setOrganization(orgData);
+        setOrganization(orgData);
+
+        if (orgData?.organization_id) {
+          const details = await getOrganizationDetails(
+            orgData.organization_id
+          );
+
+          setOrganizationData(details);
         }
       }
-    );
+    }
+  );
 
   return () => {
     listener.subscription.unsubscribe();
@@ -994,7 +1010,7 @@ if (!user) {
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <div className="grid min-h-screen lg:grid-cols-[280px_1fr]">
         <aside className="border-r border-slate-200 bg-white p-5">
-          <div className="mb-8 flex items-center gap-3"><div className="rounded-2xl bg-slate-900 p-3 text-white"><Icon name="shield" className="text-xl" /></div><div><h1 className="text-lg font-bold">HACCP Easy</h1><p className="text-xs text-slate-500">{state.restaurant.name}</p></div></div>
+          <div className="mb-8 flex items-center gap-3"><div className="rounded-2xl bg-slate-900 p-3 text-white"><Icon name="shield" className="text-xl" /></div><div><h1 className="text-lg font-bold">HACCP Easy</h1><p className="text-xs text-slate-500">{organizationData?.name || state.restaurant.name}</p></div></div>
           <nav className="space-y-2">{pages.map(([key, icon, label]) => <NavButton key={key} active={page === key} icon={icon} label={label} onClick={() => setPage(key)} />)}</nav>
         </aside>
 
@@ -1259,7 +1275,8 @@ if (!user) {
 
           {page === "team" && <><SectionTitle title="Team e responsabilità" subtitle="Utenti, ruoli, firme digitali e formazione." /><Card className="mb-5"><div className="grid gap-3 p-5 md:grid-cols-[1fr_1fr_1fr_auto]"><TextInput placeholder="Nome" value={newStaff.name} onChange={(e) => setNewStaff({ ...newStaff, name: e.target.value })} /><TextInput placeholder="Ruolo" value={newStaff.role} onChange={(e) => setNewStaff({ ...newStaff, role: e.target.value })} /><TextInput type="date" value={newStaff.trainingExpiry} onChange={(e) => setNewStaff({ ...newStaff, trainingExpiry: e.target.value })} /><Button onClick={addStaff}>Aggiungi</Button></div></Card><div className="grid gap-4 md:grid-cols-3">{state.staff.map((person: any) => <Card key={person.id}><div className="p-5"><p className="font-bold">{person.name}</p><p className="text-sm text-slate-500">{person.role}</p><p className="mt-2 text-sm">Formazione: {person.trainingExpiry}</p><div className="mt-3"><Badge tone={daysUntil(person.trainingExpiry) <= 45 ? "warn" : "ok"}>{daysUntil(person.trainingExpiry) <= 45 ? "Formazione in scadenza" : "Attivo"}</Badge></div></div></Card>)}</div></>}
 
-          {page === "settings" && <><SectionTitle title="Impostazioni ristorante" subtitle="Configura attività, soglie HACCP e dati locali." action={<Button variant="danger" onClick={resetDemo}>Reset demo</Button>} /><Card><div className="space-y-4 p-5"><div className="grid gap-4 md:grid-cols-2"><div><label className="text-sm font-medium">Nome attività</label><TextInput className="mt-2" value={state.restaurant.name} onChange={(e) => patch((prev: any) => ({ ...prev, restaurant: { ...prev.restaurant, name: e.target.value } }))} /></div><div><label className="text-sm font-medium">Responsabile HACCP</label><TextInput className="mt-2" value={state.restaurant.haccpManager} onChange={(e) => patch((prev: any) => ({ ...prev, restaurant: { ...prev.restaurant, haccpManager: e.target.value } }))} /></div><div><label className="text-sm font-medium">Indirizzo</label><TextInput className="mt-2" value={state.restaurant.address} onChange={(e) => patch((prev: any) => ({ ...prev, restaurant: { ...prev.restaurant, address: e.target.value } }))} /></div><div><label className="text-sm font-medium">Utente corrente</label><TextInput className="mt-2" value={state.currentUser} onChange={(e) => patch({ currentUser: e.target.value })} /></div><div><label className="text-sm font-medium">Limite frigo positivo °C</label><TextInput className="mt-2" type="number" value={state.restaurant.fridgeLimit} onChange={(e) => patch((prev: any) => ({ ...prev, restaurant: { ...prev.restaurant, fridgeLimit: Number(e.target.value) } }))} /></div><div><label className="text-sm font-medium">Limite freezer °C</label><TextInput className="mt-2" type="number" value={state.restaurant.freezerLimit} onChange={(e) => patch((prev: any) => ({ ...prev, restaurant: { ...prev.restaurant, freezerLimit: Number(e.target.value) } }))} /></div></div><p className="text-sm text-slate-500">I dati sono salvati nel browser con localStorage. In produzione verranno salvati su Supabase con login, permessi e storage PDF.</p></div></Card></>}
+          {page === "settings" && <><SectionTitle title="Impostazioni ristorante" subtitle="Configura attività, soglie HACCP e dati locali." action={<Button variant="danger" onClick={resetDemo}>Reset demo</Button>} /><Card><div className="space-y-4 p-5"><div className="grid gap-4 md:grid-cols-2"><div><label className="text-sm font-medium">Nome attività</label><TextInput className="mt-2" value={state.restaurant.name} onChange={(e) => patch((prev: any) => ({ ...prev, restaurant: { ...prev.restaurant, name: e.target.value } }))} /></div><div><label className="text-sm font-medium">Responsabile HACCP</label><TextInput className="mt-2" value={organizationData?.manager_name ||
+  state.restaurant.haccpManager} onChange={(e) => patch((prev: any) => ({ ...prev, restaurant: { ...prev.restaurant, haccpManager: e.target.value } }))} /></div><div><label className="text-sm font-medium">Indirizzo</label><TextInput className="mt-2" value={state.restaurant.address} onChange={(e) => patch((prev: any) => ({ ...prev, restaurant: { ...prev.restaurant, address: e.target.value } }))} /></div><div><label className="text-sm font-medium">Utente corrente</label><TextInput className="mt-2" value={state.currentUser} onChange={(e) => patch({ currentUser: e.target.value })} /></div><div><label className="text-sm font-medium">Limite frigo positivo °C</label><TextInput className="mt-2" type="number" value={state.restaurant.fridgeLimit} onChange={(e) => patch((prev: any) => ({ ...prev, restaurant: { ...prev.restaurant, fridgeLimit: Number(e.target.value) } }))} /></div><div><label className="text-sm font-medium">Limite freezer °C</label><TextInput className="mt-2" type="number" value={state.restaurant.freezerLimit} onChange={(e) => patch((prev: any) => ({ ...prev, restaurant: { ...prev.restaurant, freezerLimit: Number(e.target.value) } }))} /></div></div><p className="text-sm text-slate-500">I dati sono salvati nel browser con localStorage. In produzione verranno salvati su Supabase con login, permessi e storage PDF.</p></div></Card></>}
         </main>
       </div>
     </div>
