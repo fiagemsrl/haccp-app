@@ -326,8 +326,13 @@ export default function HaccpRestaurantApp() {
   const [organization, setOrganization] = useState<any>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const [authError, setAuthError] = useState("");
+  const [restaurantName, setRestaurantName] = useState("");
+  const [vatNumber, setVatNumber] = useState("");
+  const [address, setAddress] = useState("");
+  const [managerName, setManagerName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const [state, setState] = useState(() => clone(defaultState));
   const [mounted, setMounted] = useState(false);
   const [page, setPage] = useState("dashboard");
@@ -463,12 +468,40 @@ async function handleAuth() {
     }
 
     if (data.user) {
-      await supabase.from("profiles").insert({
-        id: data.user.id,
-        email,
-        full_name: email,
-      });
-    }
+  await supabase.from("profiles").insert({
+    id: data.user.id,
+    email,
+    full_name: email,
+  });
+
+  const { data: orgData, error: orgError } = await supabase
+    .from("organizations")
+    .insert({
+      name: restaurantName,
+      vat_number: vatNumber,
+      address,
+      manager_name: managerName,
+      phone,
+    })
+    .select()
+    .single();
+
+  if (orgError) {
+    setAuthError(orgError.message);
+    return;
+  }
+
+  await supabase.from("restaurant_users").insert({
+    organization_id: orgData.id,
+    user_id: data.user.id,
+    role: "owner",
+  });
+
+  setOrganization({
+    organization_id: orgData.id,
+    role: "owner",
+  });
+}
   } else {
     const { error } = await supabase.auth.signInWithPassword({
       email,
@@ -877,21 +910,60 @@ if (!user) {
 
         <div className="mt-6 space-y-3">
           <input
-            className="w-full rounded-2xl border border-slate-200 px-4 py-3"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
+  className="w-full rounded-2xl border border-slate-200 px-4 py-3"
+  placeholder="Email"
+  value={email}
+  onChange={(e) => setEmail(e.target.value)}
+/>
 
-          <input
-            className="w-full rounded-2xl border border-slate-200 px-4 py-3"
-            placeholder="Password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
+<input
+  className="w-full rounded-2xl border border-slate-200 px-4 py-3"
+  placeholder="Password"
+  type="password"
+  value={password}
+  onChange={(e) => setPassword(e.target.value)}
+/>
 
-          {authError && (
+{authMode === "register" && (
+  <>
+    <input
+      className="w-full rounded-2xl border border-slate-200 px-4 py-3"
+      placeholder="Nome ristorante"
+      value={restaurantName}
+      onChange={(e) => setRestaurantName(e.target.value)}
+    />
+
+    <input
+      className="w-full rounded-2xl border border-slate-200 px-4 py-3"
+      placeholder="Partita IVA"
+      value={vatNumber}
+      onChange={(e) => setVatNumber(e.target.value)}
+    />
+
+    <input
+      className="w-full rounded-2xl border border-slate-200 px-4 py-3"
+      placeholder="Indirizzo"
+      value={address}
+      onChange={(e) => setAddress(e.target.value)}
+    />
+
+    <input
+      className="w-full rounded-2xl border border-slate-200 px-4 py-3"
+      placeholder="Responsabile HACCP"
+      value={managerName}
+      onChange={(e) => setManagerName(e.target.value)}
+    />
+
+    <input
+      className="w-full rounded-2xl border border-slate-200 px-4 py-3"
+      placeholder="Telefono"
+      value={phone}
+      onChange={(e) => setPhone(e.target.value)}
+    />
+  </>
+)}
+
+	{authError && (
             <p className="text-sm text-rose-600">{authError}</p>
           )}
 
