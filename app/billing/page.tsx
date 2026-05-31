@@ -16,7 +16,11 @@ export default function BillingPage() {
 
   const data = await res.json();
 
-  window.location.href = data.url;
+if (data.url) {  
+window.location.href = data.url;
+} else {
+    alert("Errore apertura checkout Stripe");
+  }
 }
 
   return (
