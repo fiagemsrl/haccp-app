@@ -1233,6 +1233,35 @@ if (!user) {
           >
             {authMode === "login" ? "Accedi" : "Registrati"}
           </button>
+{authMode === "login" && (
+  <button
+    className="w-full rounded-2xl bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-600"
+    onClick={async () => {
+      if (!email.trim()) {
+        alert("Inserisci prima la tua email");
+        return;
+      }
+
+      const { error } =
+        await supabase.auth.resetPasswordForEmail(
+          email.trim().toLowerCase(),
+          {
+            redirectTo:
+              "https://haccp-app-rouge.vercel.app",
+          }
+        );
+
+      if (error) {
+        alert(error.message);
+        return;
+      }
+
+      alert("Email inviata");
+    }}
+  >
+    Password dimenticata?
+  </button>
+)}
 
           <button
             className="w-full rounded-2xl bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-700"
