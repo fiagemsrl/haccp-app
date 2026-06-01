@@ -369,7 +369,16 @@ export default function HaccpRestaurantApp() {
   const [inviteRole, setInviteRole] = useState("employee");
   const [invitations, setInvitations] = useState<any[]>([]);
 
-useEffect(() => {
+useEffect(() => {  
+const hash = window.location.hash;
+  const search = window.location.search;
+
+  if (
+    hash.includes("type=recovery") ||
+    search.includes("type=recovery")
+  ) {
+    setAuthMode("reset");
+  }
   supabase.auth.getUser().then(async ({ data }) => {
     setUser(data.user);
 
