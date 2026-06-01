@@ -1464,11 +1464,16 @@ if (!user) {
           <option value="auditor">Auditor</option>
         </SelectInput>
 
-        <Button onClick={inviteCollaborator}>
-          Invita
-        </Button>
-      </div>
-    </Card>
+       <Button
+  onClick={() => {
+    alert("CLICK");
+    inviteCollaborator();
+  }}
+>
+  Invita
+</Button>
+   </div>
+</Card>
 <Card className="mb-5">
   <div className="p-5">
     <h3 className="mb-4 text-lg font-bold">
