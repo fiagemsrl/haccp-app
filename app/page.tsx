@@ -1200,6 +1200,7 @@ if (authMode === "reset") {
 
              alert("Sto salvando la password...");
 
+
 const { data, error } = await supabase.auth.updateUser({
   password,
 });
@@ -1209,20 +1210,19 @@ if (error) {
   return;
 }
 
-console.log("PASSWORD UPDATE:", data);
-
-alert("Password aggiornata correttamente. Ora effettua di nuovo il login.");
-
-setPassword("");
-setConfirmPassword("");
-setAuthMode("login");
-setUser(null);
-setOrganization(null);
+alert("Password aggiornata. Torna al login.");
 
 await supabase.auth.signOut();
 
-window.location.href = "/";
-            }}
+setPassword("");
+setConfirmPassword("");
+setUser(null);
+setOrganization(null);
+setAuthMode("login");
+
+setTimeout(() => {
+  window.location.replace("/");
+}, 300);            }}
           >
             Salva nuova password
           </button>
