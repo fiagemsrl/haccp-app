@@ -390,6 +390,7 @@ useEffect(() => {
 
   const { data: listener } = supabase.auth.onAuthStateChange(
     async (_event, session) => {
+console.log("AUTH EVENT:", _event);
   if (_event === "PASSWORD_RECOVERY") {
     setAuthMode("reset");
   }
