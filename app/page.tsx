@@ -466,10 +466,37 @@ async function loadChecklist() {
     }));
   }
 }
+
+async function loadDocuments() {
+  if (!user || !organization) return;
+
+  const { data } = await supabase
+    .from("documents")
+    .select("*")
+    .eq("organization_id", organization.organization_id)
+    .order("uploaded_at", { ascending: false });
+
+  if (data) {
+    patch((prev: any) => ({
+      ...prev,
+      documents: data.map((d: any) => ({
+        id: d.id,
+        name: d.name,
+        type: d.type,
+        category: d.category,
+        expiry: d.expiry,
+        uploadedAt: d.uploaded_at,
+        url: d.url,
+      })),
+    }));
+  }
+}
+
 useEffect(() => {
   if (user && organization) {
     loadTemperatures();
     loadChecklist();
+    loadDocuments();
   }
 }, [user, organization]);
 async function handleAuth() {
@@ -723,10 +750,20 @@ async function addTemperature() {
   }
 
   const fileUrl = supabase.storage
-    .from("documents")
-    .getPublicUrl(fileName).data.publicUrl;
+  .from("documents")
+  .getPublicUrl(fileName).data.publicUrl;
 
-  patch((prev: any) => ({
+await supabase.from("documents").insert({
+  organization_id: organization.organization_id,
+  user_id: user?.id,
+  name: newDocument.name.trim(),
+  type: newDocument.type,
+  category: newDocument.category,
+  expiry: newDocument.expiry || null,
+  url: fileUrl,
+});
+
+patch((prev: any) => ({
     ...prev,
     documents: [
       {
