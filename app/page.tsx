@@ -353,6 +353,7 @@ export default function HaccpRestaurantApp() {
   const [newSupplier, setNewSupplier] = useState({ name: "", category: "", phone: "", approved: true });
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("employee");
+  const [invitations, setInvitations] = useState<any[]>([]);
 
 useEffect(() => {
   supabase.auth.getUser().then(async ({ data }) => {
@@ -520,12 +521,27 @@ async function loadNonConformities() {
   }
 }
 
+async function loadInvitations() {
+  if (!organization) return;
+
+  const { data } = await supabase
+    .from("invitations")
+    .select("*")
+    .eq("organization_id", organization.organization_id)
+    .order("created_at", { ascending: false });
+
+  if (data) {
+    setInvitations(data);
+  }
+}
+
 useEffect(() => {
   if (user && organization) {
     loadTemperatures();
     loadChecklist();
     loadDocuments();
     loadNonConformities();
+    loadInvitations();
   }
 }, [user, organization]);
 async function handleAuth() {
@@ -899,6 +915,7 @@ patch((prev: any) => ({
 
   alert("Invito creato correttamente");
 
+  await loadInvitations();
   setInviteEmail("");
   setInviteRole("employee");
 }
@@ -1437,7 +1454,38 @@ if (!user) {
         </Button>
       </div>
     </Card>
+<Card className="mb-5">
+  <div className="p-5">
+    <h3 className="mb-4 text-lg font-bold">
+      Inviti inviati
+    </h3>
 
+    <div className="space-y-2">
+      {invitations.map((invite) => (
+        <div
+          key={invite.id}
+          className="flex items-center justify-between rounded-2xl bg-slate-50 p-3"
+        >
+          <div>
+            <p className="font-medium">
+              {invite.email}
+            </p>
+
+            <p className="text-sm text-slate-500">
+              {invite.role}
+            </p>
+          </div>
+
+          <Badge tone={invite.accepted ? "ok" : "warn"}>
+            {invite.accepted
+              ? "Accettato"
+              : "In attesa"}
+          </Badge>
+        </div>
+      ))}
+    </div>
+  </div>
+</Card>
     <Card className="mb-5">
       <div className="grid gap-3 p-5 md:grid-cols-[1fr_1fr_1fr_auto]">
         <TextInput
