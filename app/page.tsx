@@ -351,6 +351,8 @@ export default function HaccpRestaurantApp() {
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [newStaff, setNewStaff] = useState({ name: "", role: "", trainingExpiry: "" });
   const [newSupplier, setNewSupplier] = useState({ name: "", category: "", phone: "", approved: true });
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState("employee");
 
 useEffect(() => {
   supabase.auth.getUser().then(async ({ data }) => {
@@ -796,6 +798,26 @@ async function addNonConformity() {
   function closeNonConformity(id: number) {
     patch((prev: any) => ({ ...prev, nonConformities: prev.nonConformities.map((n: any) => n.id === id ? { ...n, status: "Chiusa" } : n) }));
   }
+
+  async function inviteCollaborator() {
+  if (!inviteEmail.trim() || !organization?.organization_id) return;
+
+  const { error } = await supabase.from("invitations").insert({
+    organization_id: organization.organization_id,
+    email: inviteEmail.trim().toLowerCase(),
+    role: inviteRole,
+  });
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  alert("Invito creato correttamente");
+
+  setInviteEmail("");
+  setInviteRole("employee");
+}
 
   function addStaff() {
     if (!newStaff.name.trim()) return;
@@ -1301,7 +1323,99 @@ if (!user) {
 
           {page === "report" && <><SectionTitle title="Report e archivio" subtitle="Genera file HTML stampabili in PDF e conserva lo storico report generati." action={<Button variant="secondary" onClick={exportBackup}><Icon name="save" className="mr-2" />Backup JSON</Button>} /><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">{[["temperature", "Registro temperature"], ["checklist", "Checklist giornaliere"], ["nonconformities", "Non conformità"], ["products", "Magazzino e scadenze"]].map(([type, label]) => <Card key={type}><div className="p-5"><p className="font-bold">{label}</p><p className="mt-1 text-sm text-slate-500">Genera file stampabile e salvabile in PDF.</p><Button className="mt-4" onClick={() => createReport(type)}><Icon name="print" className="mr-2" />Genera</Button></div></Card>)}</div><div className="mt-6 grid gap-5 xl:grid-cols-[1fr_1fr]"><Card><div className="p-5"><h3 className="mb-4 text-lg font-bold">Archivio report generati</h3><div className="space-y-2">{state.reports.length === 0 && <p className="text-sm text-slate-500">Nessun report generato.</p>}{state.reports.map((r: any) => <div key={r.id} className="flex items-center justify-between rounded-2xl bg-slate-50 p-3 text-sm"><div><p className="font-medium">{r.filename}</p><p className="text-xs text-slate-500">{new Date(r.createdAt).toLocaleString("it-IT")} · {r.generatedBy}</p></div><Badge tone="blue">{r.type}</Badge></div>)}</div></div></Card><Card><div className="p-5"><h3 className="mb-4 text-lg font-bold">Test interni</h3><div className="space-y-2">{selfTests.map((result: any) => <div key={result.name} className="flex items-center justify-between rounded-2xl bg-slate-50 px-3 py-2 text-sm"><span>{result.name}</span><Badge tone={result.passed ? "ok" : "danger"}>{result.passed ? "PASS" : "FAIL"}</Badge></div>)}</div></div></Card></div></>}
 
-          {page === "team" && <><SectionTitle title="Team e responsabilità" subtitle="Utenti, ruoli, firme digitali e formazione." /><Card className="mb-5"><div className="grid gap-3 p-5 md:grid-cols-[1fr_1fr_1fr_auto]"><TextInput placeholder="Nome" value={newStaff.name} onChange={(e) => setNewStaff({ ...newStaff, name: e.target.value })} /><TextInput placeholder="Ruolo" value={newStaff.role} onChange={(e) => setNewStaff({ ...newStaff, role: e.target.value })} /><TextInput type="date" value={newStaff.trainingExpiry} onChange={(e) => setNewStaff({ ...newStaff, trainingExpiry: e.target.value })} /><Button onClick={addStaff}>Aggiungi</Button></div></Card><div className="grid gap-4 md:grid-cols-3">{state.staff.map((person: any) => <Card key={person.id}><div className="p-5"><p className="font-bold">{person.name}</p><p className="text-sm text-slate-500">{person.role}</p><p className="mt-2 text-sm">Formazione: {person.trainingExpiry}</p><div className="mt-3"><Badge tone={daysUntil(person.trainingExpiry) <= 45 ? "warn" : "ok"}>{daysUntil(person.trainingExpiry) <= 45 ? "Formazione in scadenza" : "Attivo"}</Badge></div></div></Card>)}</div></>}
+          {page === "team" && (
+  <>
+    <SectionTitle
+      title="Team e responsabilità"
+      subtitle="Utenti, ruoli, firme digitali e formazione."
+    />
+
+    <Card className="mb-5">
+      <div className="grid gap-3 p-5 md:grid-cols-[1.5fr_1fr_auto]">
+        <TextInput
+          placeholder="Email collaboratore"
+          value={inviteEmail}
+          onChange={(e) => setInviteEmail(e.target.value)}
+        />
+
+        <SelectInput
+          value={inviteRole}
+          onChange={(e) => setInviteRole(e.target.value)}
+        >
+          <option value="owner">Owner</option>
+          <option value="manager">Manager</option>
+          <option value="employee">Employee</option>
+          <option value="auditor">Auditor</option>
+        </SelectInput>
+
+        <Button onClick={inviteCollaborator}>
+          Invita
+        </Button>
+      </div>
+    </Card>
+
+    <Card className="mb-5">
+      <div className="grid gap-3 p-5 md:grid-cols-[1fr_1fr_1fr_auto]">
+        <TextInput
+          placeholder="Nome"
+          value={newStaff.name}
+          onChange={(e) =>
+            setNewStaff({ ...newStaff, name: e.target.value })
+          }
+        />
+
+        <TextInput
+          placeholder="Ruolo"
+          value={newStaff.role}
+          onChange={(e) =>
+            setNewStaff({ ...newStaff, role: e.target.value })
+          }
+        />
+
+        <TextInput
+          type="date"
+          value={newStaff.trainingExpiry}
+          onChange={(e) =>
+            setNewStaff({
+              ...newStaff,
+              trainingExpiry: e.target.value,
+            })
+          }
+        />
+
+        <Button onClick={addStaff}>Aggiungi</Button>
+      </div>
+    </Card>
+
+    <div className="grid gap-4 md:grid-cols-3">
+      {state.staff.map((person: any) => (
+        <Card key={person.id}>
+          <div className="p-5">
+            <p className="font-bold">{person.name}</p>
+            <p className="text-sm text-slate-500">{person.role}</p>
+            <p className="mt-2 text-sm">
+              Formazione: {person.trainingExpiry}
+            </p>
+
+            <div className="mt-3">
+              <Badge
+                tone={
+                  daysUntil(person.trainingExpiry) <= 45
+                    ? "warn"
+                    : "ok"
+                }
+              >
+                {daysUntil(person.trainingExpiry) <= 45
+                  ? "Formazione in scadenza"
+                  : "Attivo"}
+              </Badge>
+            </div>
+          </div>
+        </Card>
+      ))}
+    </div>
+  </>
+)}
 
           {page === "settings" && <><SectionTitle title="Impostazioni ristorante" subtitle="Configura attività, soglie HACCP e dati locali." action={<Button variant="danger" onClick={resetDemo}>Reset demo</Button>} /><Card><div className="space-y-4 p-5"><div className="grid gap-4 md:grid-cols-2"><div><label className="text-sm font-medium">Nome attività</label><TextInput className="mt-2" value={state.restaurant.name} onChange={(e) => patch((prev: any) => ({ ...prev, restaurant: { ...prev.restaurant, name: e.target.value } }))} /></div><div><label className="text-sm font-medium">Responsabile HACCP</label><TextInput className="mt-2" value={organizationData?.manager_name ||
   state.restaurant.haccpManager} onChange={(e) => patch((prev: any) => ({ ...prev, restaurant: { ...prev.restaurant, haccpManager: e.target.value } }))} /></div><div><label className="text-sm font-medium">Indirizzo</label><TextInput className="mt-2" value={state.restaurant.address} onChange={(e) => patch((prev: any) => ({ ...prev, restaurant: { ...prev.restaurant, address: e.target.value } }))} /></div><div><label className="text-sm font-medium">Utente corrente</label><TextInput className="mt-2" value={state.currentUser} onChange={(e) => patch({ currentUser: e.target.value })} /></div><div><label className="text-sm font-medium">Limite frigo positivo °C</label><TextInput className="mt-2" type="number" value={state.restaurant.fridgeLimit} onChange={(e) => patch((prev: any) => ({ ...prev, restaurant: { ...prev.restaurant, fridgeLimit: Number(e.target.value) } }))} /></div><div><label className="text-sm font-medium">Limite freezer °C</label><TextInput className="mt-2" type="number" value={state.restaurant.freezerLimit} onChange={(e) => patch((prev: any) => ({ ...prev, restaurant: { ...prev.restaurant, freezerLimit: Number(e.target.value) } }))} /></div></div><p className="text-sm text-slate-500">I dati sono salvati nel browser con localStorage. In produzione verranno salvati su Supabase con login, permessi e storage PDF.</p></div></Card></>}
