@@ -522,19 +522,27 @@ async function loadNonConformities() {
 }
 
 async function loadInvitations() {
-  if (!organization) return;
+  const organizationId =
+    organization?.organization_id ||
+    localStorage.getItem("organization_id");
 
-  const { data } = await supabase
+  if (!organizationId) return;
+
+  const { data, error } = await supabase
     .from("invitations")
     .select("*")
-    .eq("organization_id", organization.organization_id)
+    .eq("organization_id", organizationId)
     .order("created_at", { ascending: false });
 
-  if (data) {
-    setInvitations(data);
-  }
+if (error) {
+  alert("Errore caricamento inviti: " + error.message);
+  return;
 }
 
+console.log("INVITATIONS:", data);
+
+setInvitations(data || []);
+}
 useEffect(() => {
   if (user && organization) {
     loadTemperatures();
@@ -909,24 +917,28 @@ patch((prev: any) => ({
     return;
   }
 
-  supabase
+  const { data, error } = await supabase
     .from("invitations")
     .insert({
       organization_id: organizationId,
       email: inviteEmail.trim().toLowerCase(),
       role: inviteRole,
     })
-    .then((result) => {
-      if (result.error) {
-        alert("Errore Supabase: " + result.error.message);
-        return;
-      }
+    .select();
 
-      alert("Invito creato correttamente");
-      loadInvitations();
-      setInviteEmail("");
-      setInviteRole("employee");
-    });
+  if (error) {
+    alert("Errore Supabase: " + error.message);
+    return;
+  }
+
+  console.log("INVITO CREATO:", data);
+
+  await loadInvitations();
+
+  setInviteEmail("");
+  setInviteRole("employee");
+
+  alert("Invito creato correttamente");
 }
 
   function addStaff() {
