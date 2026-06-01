@@ -331,6 +331,7 @@ export default function HaccpRestaurantApp() {
   const [subscription, setSubscription] = useState<any>(null); 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [authError, setAuthError] = useState("");
   const [restaurantName, setRestaurantName] = useState("");
   const [vatNumber, setVatNumber] = useState("");
@@ -1143,7 +1144,7 @@ if (authMode === "reset") {
         <h1 className="text-2xl font-bold">Nuova password</h1>
 
         <p className="mt-2 text-sm text-slate-500">
-          Inserisci la nuova password per il tuo account.
+          Inserisci e conferma la nuova password.
         </p>
 
         <div className="mt-6 space-y-3">
@@ -1155,11 +1156,36 @@ if (authMode === "reset") {
             onChange={(e) => setPassword(e.target.value)}
           />
 
+          <input
+            className="w-full rounded-2xl border border-slate-200 px-4 py-3"
+            placeholder="Conferma nuova password"
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+          />
+
+          <p className="text-xs text-slate-500">
+            Minimo 8 caratteri, almeno una lettera maiuscola, un numero e un simbolo.
+          </p>
+
           <button
             className="w-full rounded-2xl bg-slate-900 px-4 py-3 font-semibold text-white"
             onClick={async () => {
-              if (!password.trim()) {
-                alert("Inserisci una nuova password");
+              const validPassword =
+                password.length >= 8 &&
+                /[A-Z]/.test(password) &&
+                /[0-9]/.test(password) &&
+                /[^A-Za-z0-9]/.test(password);
+
+              if (!validPassword) {
+                alert(
+                  "La password deve avere almeno 8 caratteri, una lettera maiuscola, un numero e un simbolo."
+                );
+                return;
+              }
+
+              if (password !== confirmPassword) {
+                alert("Le password non coincidono");
                 return;
               }
 
@@ -1168,13 +1194,16 @@ if (authMode === "reset") {
               });
 
               if (error) {
-                alert(error.message);
+                alert("Errore: " + error.message);
                 return;
               }
 
-              alert("Password aggiornata");
+              alert("Password aggiornata correttamente");
+
               setPassword("");
+              setConfirmPassword("");
               setAuthMode("login");
+
               await supabase.auth.signOut();
               window.location.href = "/";
             }}
