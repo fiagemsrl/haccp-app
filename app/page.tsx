@@ -917,21 +917,18 @@ patch((prev: any) => ({
     return;
   }
 
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from("invitations")
     .insert({
       organization_id: organizationId,
       email: inviteEmail.trim().toLowerCase(),
       role: inviteRole,
-    })
-    .select();
+    });
 
   if (error) {
     alert("Errore Supabase: " + error.message);
     return;
   }
-
-  console.log("INVITO CREATO:", data);
 
   await loadInvitations();
 
@@ -940,7 +937,7 @@ patch((prev: any) => ({
 
   alert("Invito creato correttamente");
 }
-
+  
   function addStaff() {
     if (!newStaff.name.trim()) return;
     patch((prev: any) => ({ ...prev, staff: [{ id: Date.now(), ...newStaff, active: true }, ...prev.staff] }));
