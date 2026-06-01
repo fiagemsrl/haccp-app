@@ -620,6 +620,7 @@ async function logout() {
 
   localStorage.clear();
   sessionStorage.clear();
+  location.reload();
 
   setUser(null);
   setOrganization(null);
