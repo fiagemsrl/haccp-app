@@ -1460,8 +1460,6 @@ if (!user) {
 
 <Button
   onClick={() => {
-    alert("CLICK");
-    console.log("FUNCTION", inviteCollaborator);
     inviteCollaborator();
   }}
 >
