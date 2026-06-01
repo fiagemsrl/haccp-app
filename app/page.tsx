@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import type { User } from "@supabase/supabase-js";
 import SignatureCanvas from "react-signature-canvas";
+import { getSubscriptionStatus } from "@/lib/getSubscription";
 import {
   getCurrentOrganizationId,
   getOrganizationDetails,
@@ -326,8 +327,8 @@ function SectionTitle({
 export default function HaccpRestaurantApp() {
   const [user, setUser] = useState<User | null>(null);
   const [organization, setOrganization] = useState<any>(null);
-  const [organizationData, setOrganizationData] =
-  useState<any>(null);
+  const [organizationData, setOrganizationData] = useState<any>(null);
+  const [subscription, setSubscription] = useState<any>(null); 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
@@ -357,15 +358,17 @@ useEffect(() => {
 
     if (data.user) {
       const orgData = await getCurrentOrganizationId(data.user.id);
-
       setOrganization(orgData);
 
       if (orgData?.organization_id) {
-  localStorage.setItem(
-    "organization_id",
-    orgData.organization_id
-  );
-}
+        localStorage.setItem("organization_id", orgData.organization_id);
+
+        const details = await getOrganizationDetails(orgData.organization_id);
+        setOrganizationData(details);
+
+        const sub = await getSubscriptionStatus(orgData.organization_id);
+        setSubscription(sub);
+      }
     }
   });
 
@@ -374,18 +377,17 @@ useEffect(() => {
       setUser(session?.user ?? null);
 
       if (session?.user) {
-        const orgData = await getCurrentOrganizationId(
-          session.user.id
-        );
-
+        const orgData = await getCurrentOrganizationId(session.user.id);
         setOrganization(orgData);
 
         if (orgData?.organization_id) {
-          const details = await getOrganizationDetails(
-            orgData.organization_id
-          );
+          localStorage.setItem("organization_id", orgData.organization_id);
 
+          const details = await getOrganizationDetails(orgData.organization_id);
           setOrganizationData(details);
+
+          const sub = await getSubscriptionStatus(orgData.organization_id);
+          setSubscription(sub);
         }
       }
     }
@@ -912,6 +914,33 @@ async function addNonConformity() {
 
 if (!mounted) {
   return <div className="p-8">Caricamento...</div>;
+}
+
+if (
+  user &&
+  subscription &&
+  subscription.status !== "active"
+) {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-slate-50">
+      <div className="rounded-3xl bg-white p-10 shadow-lg text-center">
+        <h1 className="text-3xl font-bold">
+          Abbonamento non attivo
+        </h1>
+
+        <p className="mt-4 text-slate-500">
+          Per utilizzare HACCP Easy devi attivare un piano.
+        </p>
+
+        <button
+          onClick={() => (window.location.href = "/billing")}
+          className="mt-6 rounded-2xl bg-blue-600 px-6 py-3 font-semibold text-white"
+        >
+          Vai ai piani
+        </button>
+      </div>
+    </div>
+  );
 }
 
 if (!user) {
