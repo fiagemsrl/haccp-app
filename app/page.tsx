@@ -907,7 +907,7 @@ patch((prev: any) => ({
   await loadNonConformities();
 }
 
- async function inviteCollaborator() {
+ function inviteCollaborator() {
   const organizationId =
     organization?.organization_id ||
     localStorage.getItem("organization_id");
@@ -917,25 +917,26 @@ patch((prev: any) => ({
     return;
   }
 
-  const { error } = await supabase
+  supabase
     .from("invitations")
     .insert({
       organization_id: organizationId,
       email: inviteEmail.trim().toLowerCase(),
       role: inviteRole,
+    })
+    .then(async (result) => {
+      if (result.error) {
+        alert("Errore Supabase: " + result.error.message);
+        return;
+      }
+
+      await loadInvitations();
+
+      setInviteEmail("");
+      setInviteRole("employee");
+
+      alert("Invito creato correttamente");
     });
-
-  if (error) {
-    alert("Errore Supabase: " + error.message);
-    return;
-  }
-
-  await loadInvitations();
-
-  setInviteEmail("");
-  setInviteRole("employee");
-
-  alert("Invito creato correttamente");
 }
   
   function addStaff() {
