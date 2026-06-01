@@ -1136,7 +1136,56 @@ patch((prev: any) => ({
 if (!mounted) {
   return <div className="p-8">Caricamento...</div>;
 }
+if (authMode === "reset") {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 p-6">
+      <div className="w-full max-w-md rounded-3xl bg-white p-8 shadow-sm">
+        <h1 className="text-2xl font-bold">Nuova password</h1>
 
+        <p className="mt-2 text-sm text-slate-500">
+          Inserisci la nuova password per il tuo account.
+        </p>
+
+        <div className="mt-6 space-y-3">
+          <input
+            className="w-full rounded-2xl border border-slate-200 px-4 py-3"
+            placeholder="Nuova password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+
+          <button
+            className="w-full rounded-2xl bg-slate-900 px-4 py-3 font-semibold text-white"
+            onClick={async () => {
+              if (!password.trim()) {
+                alert("Inserisci una nuova password");
+                return;
+              }
+
+              const { error } = await supabase.auth.updateUser({
+                password,
+              });
+
+              if (error) {
+                alert(error.message);
+                return;
+              }
+
+              alert("Password aggiornata");
+              setPassword("");
+              setAuthMode("login");
+              await supabase.auth.signOut();
+              window.location.href = "/";
+            }}
+          >
+            Salva nuova password
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 if (
   user &&
   subscription &&
