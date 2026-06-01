@@ -349,6 +349,19 @@ export default function HaccpRestaurantApp() {
   const [newTask, setNewTask] = useState({ title: "", area: "Cucina", frequency: "Giornaliera", critical: false });
   const [newDocument, setNewDocument] = useState({ name: "", type: "PDF", category: "Manuale", expiry: "" });
   const [documentFile, setDocumentFile] = useState<File | null>(null);
+  const [newFoodLabel, setNewFoodLabel] = useState({
+  productName: "",
+  supplier: "",
+  lot: "",
+  expiry: "",
+  openedAt: "",
+  ingredients: "",
+  allergens: "",
+  notes: "",
+});
+
+  const [foodLabelPhoto, setFoodLabelPhoto] = useState<File | null>(null);
+  const [foodLabels, setFoodLabels] = useState<any[]>([]);
   const [newStaff, setNewStaff] = useState({ name: "", role: "", trainingExpiry: "" });
   const [newSupplier, setNewSupplier] = useState({ name: "", category: "", phone: "", approved: true });
   const [inviteEmail, setInviteEmail] = useState("");
@@ -573,7 +586,14 @@ async function handleAuth() {
     full_name: email,
   });
 
-  const { data: orgData, error: orgError } = await supabase
+const { data: invitation } = await supabase
+  .from("invitations")
+  .select("*")
+  .eq("email", email.toLowerCase())
+  .eq("accepted", false)
+  .maybeSingle();
+  
+const { data: orgData, error: orgError } = await supabase
     .from("organizations")
     .insert({
       name: restaurantName,
@@ -1065,7 +1085,7 @@ patch((prev: any) => ({
   }
 
   const pages = [
-    ["dashboard", "dashboard", "Dashboard"], ["checklist", "clipboard", "Checklist"], ["temperature", "temp", "Temperature"], ["magazzino", "package", "Magazzino"], ["documenti", "document", "Documenti"], ["nonconformita", "alert", "Non conformità"], ["fornitori", "supplier", "Fornitori"], ["report", "report", "Report"], ["team", "team", "Team"], ["settings", "settings", "Impostazioni"],
+    ["dashboard", "dashboard", "Dashboard"], ["checklist", "clipboard", "Checklist"], ["temperature", "temp", "Temperature"], ["magazzino", "package", "Magazzino"],["etichette", "document", "Etichette"], ["documenti", "document", "Documenti"], ["nonconformita", "alert", "Non conformità"], ["fornitori", "supplier", "Fornitori"], ["report", "report", "Report"], ["team", "team", "Team"], ["settings", "settings", "Impostazioni"],
   ];
 
 if (!mounted) {
