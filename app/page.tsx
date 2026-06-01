@@ -920,7 +920,7 @@ patch((prev: any) => ({
 
   alert("5 prima insert");
 
-  const result = await supabase.from("invitations").insert({
+  const result = supabase.from("invitations").insert({
     organization_id: organizationId,
     email: inviteEmail.trim().toLowerCase(),
     role: inviteRole,
