@@ -1198,14 +1198,17 @@ if (authMode === "reset") {
                 return;
               }
 
-              alert("Password aggiornata correttamente");
+              alert("Password aggiornata correttamente. Ora effettua di nuovo il login.");
 
-              setPassword("");
-              setConfirmPassword("");
-              setAuthMode("login");
+setPassword("");
+setConfirmPassword("");
+setAuthMode("login");
+setUser(null);
+setOrganization(null);
 
-              await supabase.auth.signOut();
-              window.location.href = "/";
+await supabase.auth.signOut();
+
+window.location.href = "/";
             }}
           >
             Salva nuova password
