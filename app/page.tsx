@@ -916,16 +916,15 @@ patch((prev: any) => ({
 
     alert("PRIMA DI SUPABASE");
 
-    const { data, error } = await supabase
-      .from("invitations")
-      .insert({
-        organization_id: organizationId,
-        email: inviteEmail.trim().toLowerCase(),
-        role: inviteRole,
-      })
-      .select();
+    const { error } = await supabase
+  .from("invitations")
+  .insert({
+    organization_id: organizationId,
+    email: inviteEmail.trim().toLowerCase(),
+    role: inviteRole,
+  });
 
-    alert("DOPO SUPABASE");
+alert("DOPO SUPABASE");
 
     if (error) {
       alert("Errore Supabase: " + error.message);
