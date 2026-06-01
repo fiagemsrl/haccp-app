@@ -1370,20 +1370,31 @@ if (!user) {
           return;
         }
 
-        const { error } =
-          await supabase.auth.updateUser({
-            password,
-          });
+        const { error } = await supabase.auth.updateUser({
+  password,
+});
 
-        if (error) {
-          alert(error.message);
-          return;
-        }
+if (error) {
+  alert("Errore reset: " + error.message);
+  return;
+}
 
-        alert("Password aggiornata");
-        setAuthMode("login");
-      }
-    : handleAuth
+alert("Password aggiornata. Ora effettua il login.");
+
+setPassword("");
+setConfirmPassword("");
+setAuthMode("login");
+setUser(null);
+setOrganization(null);
+
+localStorage.clear();
+sessionStorage.clear();
+
+await supabase.auth.signOut();
+
+window.location.href = "/";
+}
+: handleAuth
 }
 >
   {authMode === "forgot"
