@@ -900,13 +900,17 @@ patch((prev: any) => ({
 }
 
   async function inviteCollaborator() {
-  if (!inviteEmail.trim() || !organization?.organization_id) {
+  const organizationId =
+    organization?.organization_id ||
+    localStorage.getItem("organization_id");
+
+  if (!inviteEmail.trim() || !organizationId) {
     alert("Email o organizzazione mancante");
     return;
   }
 
   const { error } = await supabase.from("invitations").insert({
-    organization_id: organization.organization_id,
+    organization_id: organizationId,
     email: inviteEmail.trim().toLowerCase(),
     role: inviteRole,
   });
@@ -917,7 +921,7 @@ patch((prev: any) => ({
   }
 
   await loadInvitations();
-  
+
   alert("Invito creato correttamente");
 
   setInviteEmail("");
