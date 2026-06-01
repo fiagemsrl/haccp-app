@@ -900,7 +900,10 @@ patch((prev: any) => ({
 }
 
   async function inviteCollaborator() {
-  if (!inviteEmail.trim() || !organization?.organization_id) return;
+  if (!inviteEmail.trim() || !organization?.organization_id) {
+    alert("Email o organizzazione mancante");
+    return;
+  }
 
   const { error } = await supabase.from("invitations").insert({
     organization_id: organization.organization_id,
@@ -913,9 +916,10 @@ patch((prev: any) => ({
     return;
   }
 
+  await loadInvitations();
+  
   alert("Invito creato correttamente");
 
-  await loadInvitations();
   setInviteEmail("");
   setInviteRole("employee");
 }
