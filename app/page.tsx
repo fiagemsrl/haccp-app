@@ -337,7 +337,7 @@ export default function HaccpRestaurantApp() {
   const [address, setAddress] = useState("");
   const [managerName, setManagerName] = useState("");
   const [phone, setPhone] = useState("");
-  const [authMode, setAuthMode] = useState<"login" | "register">("login");
+  const [authMode, setAuthMode] = useState<"login" | "register" | "forgot">("login");
   const [state, setState] = useState(() => clone(defaultState));
   const [mounted, setMounted] = useState(false);
   const [page, setPage] = useState("dashboard");
@@ -1176,13 +1176,19 @@ if (!user) {
   onChange={(e) => setEmail(e.target.value)}
 />
 
-<input
-  className="w-full rounded-2xl border border-slate-200 px-4 py-3"
-  placeholder="Password"
-  type="password"
-  value={password}
-  onChange={(e) => setPassword(e.target.value)}
-/>
+{authMode !== "forgot" && (
+  <input
+    className="w-full rounded-2xl border border-slate-200 px-4 py-3"
+    placeholder="Password"
+    type="password"
+    value={password}
+    onChange={(e) => setPassword(e.target.value)}
+  />
+)}{authMode === "forgot" && (
+  <p className="text-sm text-slate-500">
+    Inserisci la tua email e ti invieremo il link per reimpostare la password.
+  </p>
+)}
 
 {authMode === "register" && (
   <>
@@ -1228,46 +1234,58 @@ if (!user) {
           )}
 
           <button
-            className="w-full rounded-2xl bg-slate-900 px-4 py-3 font-semibold text-white"
-            onClick={handleAuth}
-          >
-            {authMode === "login" ? "Accedi" : "Registrati"}
-          </button>
+  className="w-full rounded-2xl bg-slate-900 px-4 py-3 font-semibold text-white"
+  onClick={
+    authMode === "forgot"
+      ? async () => {
+          if (!email.trim()) {
+            alert("Inserisci la tua email");
+            return;
+          }
+
+          const { error } =
+            await supabase.auth.resetPasswordForEmail(
+              email.trim().toLowerCase(),
+              {
+                redirectTo:
+                  "https://haccp-app-rouge.vercel.app",
+              }
+            );
+
+          if (error) {
+            alert(error.message);
+            return;
+          }
+
+          alert("Email inviata");
+          setAuthMode("login");
+        }
+      : handleAuth
+  }
+>
+  {authMode === "forgot"
+    ? "Invia link reset"
+    : authMode === "login"
+    ? "Accedi"
+    : "Registrati"}
+</button>
 {authMode === "login" && (
   <button
-    className="w-full rounded-2xl bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-600"
-    onClick={async () => {
-      if (!email.trim()) {
-        alert("Inserisci prima la tua email");
-        return;
-      }
-
-      const { error } =
-        await supabase.auth.resetPasswordForEmail(
-          email.trim().toLowerCase(),
-          {
-            redirectTo:
-              "https://haccp-app-rouge.vercel.app",
-          }
-        );
-
-      if (error) {
-        alert(error.message);
-        return;
-      }
-
-      alert("Email inviata");
-    }}
+    className="w-full px-4 py-2 text-sm font-semibold text-slate-500"
+    onClick={() => setAuthMode("forgot")}
   >
     Password dimenticata?
   </button>
 )}
-
           <button
             className="w-full rounded-2xl bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-700"
-            onClick={() =>
-              setAuthMode(authMode === "login" ? "register" : "login")
-            }
+            onClick={() => {
+  if (authMode === "login") {
+    setAuthMode("register");
+  } else {
+    setAuthMode("login");
+  }
+}}
           >
             {authMode === "login"
               ? "Non hai un account? Registrati"
