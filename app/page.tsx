@@ -592,7 +592,28 @@ const { data: invitation } = await supabase
   .eq("email", email.toLowerCase())
   .eq("accepted", false)
   .maybeSingle();
-  
+
+  if (invitation) {
+  await supabase.from("restaurant_users").insert({
+    organization_id: invitation.organization_id,
+    user_id: data.user.id,
+    role: invitation.role,
+  });
+
+  await supabase
+    .from("invitations")
+    .update({
+      accepted: true,
+    })
+    .eq("id", invitation.id);
+
+  setOrganization({
+    organization_id: invitation.organization_id,
+    role: invitation.role,
+  });
+
+  return;
+}
 const { data: orgData, error: orgError } = await supabase
     .from("organizations")
     .insert({
@@ -938,17 +959,36 @@ patch((prev: any) => ({
     return;
   }
 
+  const cleanEmail = inviteEmail.trim().toLowerCase();
+
   supabase
     .from("invitations")
     .insert({
       organization_id: organizationId,
-      email: inviteEmail.trim().toLowerCase(),
+      email: cleanEmail,
       role: inviteRole,
       accepted: false,
     })
-    .then((result) => {
+    .then(async (result) => {
       if (result.error) {
         alert("Errore Supabase: " + result.error.message);
+        return;
+      }
+
+      const res = await fetch("/api/invite-user", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: cleanEmail,
+        }),
+      });
+
+      const json = await res.json();
+
+      if (!res.ok) {
+        alert("Invito salvato, ma email non inviata: " + json.error);
         return;
       }
 
@@ -956,7 +996,7 @@ patch((prev: any) => ({
         {
           id: Date.now(),
           organization_id: organizationId,
-          email: inviteEmail.trim().toLowerCase(),
+          email: cleanEmail,
           role: inviteRole,
           accepted: false,
         },
@@ -966,7 +1006,7 @@ patch((prev: any) => ({
       setInviteEmail("");
       setInviteRole("employee");
 
-      alert("Invito creato correttamente");
+      alert("Invito inviato via email");
     })
     .catch((err) => {
       alert("Errore JS: " + err.message);
