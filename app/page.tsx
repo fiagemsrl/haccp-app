@@ -904,25 +904,31 @@ patch((prev: any) => ({
     organization?.organization_id ||
     localStorage.getItem("organization_id");
 
+  alert(`email=${inviteEmail} org=${organizationId} role=${inviteRole}`);
+
   if (!inviteEmail.trim() || !organizationId) {
     alert("Email o organizzazione mancante");
     return;
   }
 
-  const { error } = await supabase.from("invitations").insert({
-    organization_id: organizationId,
-    email: inviteEmail.trim().toLowerCase(),
-    role: inviteRole,
-  });
+  const { data, error } = await supabase
+    .from("invitations")
+    .insert({
+      organization_id: organizationId,
+      email: inviteEmail.trim().toLowerCase(),
+      role: inviteRole,
+    })
+    .select();
 
   if (error) {
-    alert(error.message);
+    alert("Errore Supabase: " + error.message);
+    console.error(error);
     return;
   }
 
-  await loadInvitations();
+  alert("Invito creato: " + JSON.stringify(data));
 
-  alert("Invito creato correttamente");
+  await loadInvitations();
 
   setInviteEmail("");
   setInviteRole("employee");
