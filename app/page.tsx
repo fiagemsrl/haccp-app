@@ -923,19 +923,32 @@ patch((prev: any) => ({
       organization_id: organizationId,
       email: inviteEmail.trim().toLowerCase(),
       role: inviteRole,
+      accepted: false,
     })
-    .then(async (result) => {
+    .then((result) => {
       if (result.error) {
         alert("Errore Supabase: " + result.error.message);
         return;
       }
 
-      await loadInvitations();
+      setInvitations((prev) => [
+        {
+          id: Date.now(),
+          organization_id: organizationId,
+          email: inviteEmail.trim().toLowerCase(),
+          role: inviteRole,
+          accepted: false,
+        },
+        ...prev,
+      ]);
 
       setInviteEmail("");
       setInviteRole("employee");
 
       alert("Invito creato correttamente");
+    })
+    .catch((err) => {
+      alert("Errore JS: " + err.message);
     });
 }
   
@@ -1468,14 +1481,9 @@ if (!user) {
           <option value="auditor">Auditor</option>
         </SelectInput>
 
-<Button
-  onClick={() => {
-    inviteCollaborator();
-  }}
->
+<Button onClick={inviteCollaborator}>
   Invita
-</Button>
-   </div>
+</Button>   </div>
 </Card>
 <Card className="mb-5">
   <div className="p-5">
