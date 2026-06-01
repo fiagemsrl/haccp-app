@@ -1339,71 +1339,38 @@ if (!user) {
           <button
   className="w-full rounded-2xl bg-slate-900 px-4 py-3 font-semibold text-white"
   onClick={
-  authMode === "forgot"
-    ? async () => {
-        if (!email.trim()) {
-          alert("Inserisci la tua email");
-          return;
+    authMode === "forgot"
+      ? async () => {
+          if (!email.trim()) {
+            alert("Inserisci la tua email");
+            return;
+          }
+
+          const { error } =
+            await supabase.auth.resetPasswordForEmail(
+              email.trim().toLowerCase(),
+              {
+                redirectTo:
+                  "https://haccp-app-rouge.vercel.app",
+              }
+            );
+
+          if (error) {
+            alert(error.message);
+            return;
+          }
+
+          alert("Email inviata");
+          setAuthMode("login");
         }
-
-        const { error } =
-          await supabase.auth.resetPasswordForEmail(
-            email.trim().toLowerCase(),
-            {
-              redirectTo:
-                "https://haccp-app-rouge.vercel.app",
-            }
-          );
-
-        if (error) {
-          alert(error.message);
-          return;
-        }
-
-        alert("Email inviata");
-        setAuthMode("login");
-      }
-    : authMode === "reset"
-    ? async () => {
-        if (!password.trim()) {
-          alert("Inserisci una nuova password");
-          return;
-        }
-
-        const { error } = await supabase.auth.updateUser({
-  password,
-});
-
-if (error) {
-  alert("Errore reset: " + error.message);
-  return;
-}
-
-alert("Password aggiornata. Ora effettua il login.");
-
-setPassword("");
-setConfirmPassword("");
-setAuthMode("login");
-setUser(null);
-setOrganization(null);
-
-localStorage.clear();
-sessionStorage.clear();
-
-await supabase.auth.signOut();
-
-window.location.href = "/";
-}
-: handleAuth
-}
+      : handleAuth
+  }
 >
   {authMode === "forgot"
-  ? "Invia link reset"
-  : authMode === "reset"
-  ? "Salva nuova password"
-  : authMode === "login"
-  ? "Accedi"
-  : "Registrati"}
+    ? "Invia link reset"
+    : authMode === "login"
+    ? "Accedi"
+    : "Registrati"}
 </button>
 {authMode === "login" && (
   <button
