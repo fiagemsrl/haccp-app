@@ -899,47 +899,46 @@ patch((prev: any) => ({
   await loadNonConformities();
 }
 
-  async function inviteCollaborator() {
-  alert("ENTRATO NELLA FUNZIONE");
+ async function inviteCollaborator() {
+  alert("1 start");
 
-  try {
-    const organizationId =
-      organization?.organization_id ||
-      localStorage.getItem("organization_id");
+  const organizationId =
+    organization?.organization_id ||
+    localStorage.getItem("organization_id");
 
-    alert(`ORG: ${organizationId}`);
+  alert("2 org " + organizationId);
 
-    if (!inviteEmail.trim() || !organizationId) {
-      alert("Email o organizzazione mancante");
-      return;
-    }
+  if (!inviteEmail.trim()) {
+    alert("3 email mancante");
+    return;
+  }
 
-    alert("PRIMA DI SUPABASE");
+  if (!organizationId) {
+    alert("4 org mancante");
+    return;
+  }
 
-    const { error } = await supabase
-  .from("invitations")
-  .insert({
+  alert("5 prima insert");
+
+  const result = await supabase.from("invitations").insert({
     organization_id: organizationId,
     email: inviteEmail.trim().toLowerCase(),
     role: inviteRole,
   });
 
-alert("DOPO SUPABASE");
+  alert("6 dopo insert");
 
-    if (error) {
-      alert("Errore Supabase: " + error.message);
-      return;
-    }
-
-    alert("Invito creato correttamente");
-
-    await loadInvitations();
-
-    setInviteEmail("");
-    setInviteRole("employee");
-  } catch (err: any) {
-    alert("Errore JS: " + err.message);
+  if (result.error) {
+    alert("Errore Supabase: " + result.error.message);
+    return;
   }
+
+  alert("Invito creato correttamente");
+
+  await loadInvitations();
+
+  setInviteEmail("");
+  setInviteRole("employee");
 }
 
   function addStaff() {
