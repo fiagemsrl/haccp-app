@@ -492,11 +492,40 @@ async function loadDocuments() {
   }
 }
 
+async function loadNonConformities() {
+  if (!user || !organization) return;
+
+  const { data } = await supabase
+    .from("non_conformities")
+    .select("*")
+    .eq("organization_id", organization.organization_id)
+    .order("created_at", { ascending: false });
+
+  if (data) {
+    patch((prev: any) => ({
+      ...prev,
+      nonConformities: data.map((n: any) => ({
+        id: n.id,
+        title: n.title,
+        severity: n.severity,
+        action: n.action,
+        status: n.status,
+        operator: n.operator,
+        photoUrl: n.photo_url,
+        date: new Date(n.created_at)
+          .toISOString()
+          .slice(0, 10),
+      })),
+    }));
+  }
+}
+
 useEffect(() => {
   if (user && organization) {
     loadTemperatures();
     loadChecklist();
     loadDocuments();
+    loadNonConformities();
   }
 }, [user, organization]);
 async function handleAuth() {
@@ -806,7 +835,18 @@ async function addNonConformity() {
     }
   }
 
-  patch((prev: any) => ({
+await supabase.from("non_conformities").insert({
+  organization_id: organization.organization_id,
+  user_id: user?.id,
+  title: newNc.title.trim(),
+  severity: newNc.severity,
+  action: newNc.action,
+  status: "Aperta",
+  photo_url: photoUrl,
+  operator: newNc.operator,
+});
+  
+patch((prev: any) => ({
     ...prev,
     nonConformities: [
       {
@@ -832,9 +872,16 @@ async function addNonConformity() {
 }
 
   
-  function closeNonConformity(id: number) {
-    patch((prev: any) => ({ ...prev, nonConformities: prev.nonConformities.map((n: any) => n.id === id ? { ...n, status: "Chiusa" } : n) }));
-  }
+  async function closeNonConformity(id: number) {
+  await supabase
+    .from("non_conformities")
+    .update({
+      status: "Chiusa",
+    })
+    .eq("id", id);
+
+  await loadNonConformities();
+}
 
   async function inviteCollaborator() {
   if (!inviteEmail.trim() || !organization?.organization_id) return;
