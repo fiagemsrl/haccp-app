@@ -901,15 +901,20 @@ patch((prev: any) => ({
 
   async function inviteCollaborator() {
   alert("ENTRATO NELLA FUNZIONE");
+
   try {
     const organizationId =
       organization?.organization_id ||
       localStorage.getItem("organization_id");
 
+    alert(`ORG: ${organizationId}`);
+
     if (!inviteEmail.trim() || !organizationId) {
       alert("Email o organizzazione mancante");
       return;
     }
+
+    alert("PRIMA DI SUPABASE");
 
     const { data, error } = await supabase
       .from("invitations")
@@ -919,6 +924,8 @@ patch((prev: any) => ({
         role: inviteRole,
       })
       .select();
+
+    alert("DOPO SUPABASE");
 
     if (error) {
       alert("Errore Supabase: " + error.message);
