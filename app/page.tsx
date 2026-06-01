@@ -1189,16 +1189,20 @@ if (authMode === "reset") {
                 return;
               }
 
-              const { error } = await supabase.auth.updateUser({
-                password,
-              });
+             alert("Sto salvando la password...");
 
-              if (error) {
-                alert("Errore: " + error.message);
-                return;
-              }
+const { data, error } = await supabase.auth.updateUser({
+  password,
+});
 
-              alert("Password aggiornata correttamente. Ora effettua di nuovo il login.");
+if (error) {
+  alert("Errore reset: " + error.message);
+  return;
+}
+
+console.log("PASSWORD UPDATE:", data);
+
+alert("Password aggiornata correttamente. Ora effettua di nuovo il login.");
 
 setPassword("");
 setConfirmPassword("");
