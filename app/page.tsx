@@ -900,6 +900,7 @@ patch((prev: any) => ({
 }
 
   async function inviteCollaborator() {
+  alert("ENTRATO NELLA FUNZIONE");
   try {
     const organizationId =
       organization?.organization_id ||
@@ -1464,9 +1465,10 @@ if (!user) {
           <option value="auditor">Auditor</option>
         </SelectInput>
 
-       <Button
+<Button
   onClick={() => {
     alert("CLICK");
+    console.log("FUNCTION", inviteCollaborator);
     inviteCollaborator();
   }}
 >
