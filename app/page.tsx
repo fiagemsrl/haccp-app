@@ -919,8 +919,10 @@ patch((prev: any) => ({
       role: inviteRole,
     })
     .select();
-
-  if (error) {
+console.log("INVITATION DATA", data);
+console.log("INVITATION ERROR", error);
+  
+if (error) {
     alert("Errore Supabase: " + error.message);
     console.error(error);
     return;
