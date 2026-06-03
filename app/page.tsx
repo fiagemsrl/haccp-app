@@ -1014,18 +1014,23 @@ patch((prev: any) => ({
   const cleanEmail = inviteEmail.trim().toLowerCase();
 
   supabase
-    .from("invitations")
-    .insert({
+  .from("invitations")
+  .upsert(
+    {
       organization_id: organizationId,
       email: cleanEmail,
       role: inviteRole,
       accepted: false,
-    })
-    .then(async (result) => {
-      if (result.error) {
-        alert("Errore Supabase: " + result.error.message);
-        return;
-      }
+    },
+    {
+      onConflict: "organization_id,email",
+    }
+  )
+  .then(async (result) => {
+    if (result.error) {
+      alert("Errore Supabase: " + result.error.message);
+      return;
+    }
 
      const res = await fetch("/api/invite-user", {
   method: "POST",
