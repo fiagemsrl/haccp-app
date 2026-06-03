@@ -369,6 +369,34 @@ export default function HaccpRestaurantApp() {
   const [inviteRole, setInviteRole] = useState("employee");
   const [invitations, setInvitations] = useState<any[]>([]);
 
+async function acceptPendingInvitation(currentUser: any) {
+  if (!currentUser?.email) return null;
+
+  const { data: invitation } = await supabase
+    .from("invitations")
+    .select("*")
+    .eq("email", currentUser.email.toLowerCase())
+    .eq("accepted", false)
+    .maybeSingle();
+
+  if (!invitation) return null;
+
+  await supabase.from("restaurant_users").insert({
+    organization_id: invitation.organization_id,
+    user_id: currentUser.id,
+    role: invitation.role,
+  });
+
+  await supabase
+    .from("invitations")
+    .update({ accepted: true })
+    .eq("id", invitation.id);
+
+  return {
+    organization_id: invitation.organization_id,
+    role: invitation.role,
+  };
+}
 useEffect(() => {  
 const hash = window.location.hash;
   const search = window.location.search;
@@ -383,7 +411,11 @@ const hash = window.location.hash;
     setUser(data.user);
 
     if (data.user) {
-      const orgData = await getCurrentOrganizationId(data.user.id);
+      let orgData = await getCurrentOrganizationId(data.user.id);
+
+if (!orgData?.organization_id) {
+  orgData = await acceptPendingInvitation(data.user);
+}
       setOrganization(orgData);
 
       if (orgData?.organization_id) {
@@ -408,9 +440,14 @@ console.log("AUTH EVENT:", _event);
 
 
       if (session?.user) {
-        const orgData = await getCurrentOrganizationId(session.user.id);
-        setOrganization(orgData);
+        let orgData = await getCurrentOrganizationId(session.user.id);
 
+if (!orgData?.organization_id) {
+  orgData = await acceptPendingInvitation(session.user);
+}
+
+setOrganization(orgData);
+        
         if (orgData?.organization_id) {
           localStorage.setItem("organization_id", orgData.organization_id);
 
