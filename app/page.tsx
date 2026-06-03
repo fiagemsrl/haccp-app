@@ -1001,7 +1001,7 @@ patch((prev: any) => ({
   await loadNonConformities();
 }
 
- function inviteCollaborator() {
+ async function inviteCollaborator() {
   const organizationId =
     organization?.organization_id ||
     localStorage.getItem("organization_id");
@@ -1027,44 +1027,43 @@ patch((prev: any) => ({
         return;
       }
 
-      const res = await fetch("/api/invite-user", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: cleanEmail,
-        }),
-      });
+     const res = await fetch("/api/invite-user", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    email: cleanEmail,
+    organizationId,
+    role: inviteRole,
+  }),
+});
 
-      const json = await res.json();
-
-      if (!res.ok) {
-        alert("Invito salvato, ma email non inviata: " + json.error);
-        return;
-      }
-
-      setInvitations((prev) => [
-        {
-          id: Date.now(),
-          organization_id: organizationId,
-          email: cleanEmail,
-          role: inviteRole,
-          accepted: false,
-        },
-        ...prev,
-      ]);
-
-      setInviteEmail("");
-      setInviteRole("employee");
-
-      alert("Invito inviato via email");
-    })
-    .catch((err) => {
-      alert("Errore JS: " + err.message);
-    });
+if (!res.ok) {
+  alert("Invito salvato, ma email non inviata: " + json.error);
+  return;
 }
-  
+
+setInvitations((prev) => [
+  {
+    id: Date.now(),
+    organization_id: organizationId,
+    email: cleanEmail,
+    role: inviteRole,
+    accepted: false,
+  },
+  ...prev,
+]);
+
+setInviteEmail("");
+setInviteRole("employee");
+
+alert(
+  "Utente creato. Password temporanea: " +
+    json.temporaryPassword
+);
+ });
+} 
   function addStaff() {
     if (!newStaff.name.trim()) return;
     patch((prev: any) => ({ ...prev, staff: [{ id: Date.now(), ...newStaff, active: true }, ...prev.staff] }));
