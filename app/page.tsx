@@ -1793,11 +1793,22 @@ if (!user) {
             </p>
           </div>
 
-          <Badge tone={invite.accepted ? "ok" : "warn"}>
-            {invite.accepted
-              ? "Accettato"
-              : "In attesa"}
-          </Badge>
+          <div className="flex items-center gap-2">
+  <Badge tone={invite.accepted ? "ok" : "warn"}>
+    {invite.accepted
+      ? "Accettato"
+      : "In attesa"}
+  </Badge>
+
+  {!invite.accepted && (
+    <Button
+      variant="secondary"
+      onClick={() => resendInvitation(invite)}
+    >
+      Reinvia
+    </Button>
+  )}
+</div>
         </div>
       ))}
     </div>
