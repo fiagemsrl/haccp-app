@@ -10,6 +10,16 @@ function generateTemporaryPassword() {
   return `Temp${Math.floor(100000 + Math.random() * 900000)}!`;
 }
 
+async function findUserByEmail(email: string) {
+  const { data, error } = await supabaseAdmin.auth.admin.listUsers();
+
+  if (error) return null;
+
+  return data.users.find(
+    (user) => user.email?.toLowerCase() === email.toLowerCase()
+  );
+}
+
 export async function POST(req: Request) {
   try {
     const { email, organizationId, role } = await req.json();
@@ -21,41 +31,44 @@ export async function POST(req: Request) {
       );
     }
 
+    const cleanEmail = email.trim().toLowerCase();
     const temporaryPassword = generateTemporaryPassword();
+
+    let userId = "";
 
     const { data: userData, error: userError } =
       await supabaseAdmin.auth.admin.createUser({
-        email,
+        email: cleanEmail,
         password: temporaryPassword,
         email_confirm: true,
       });
 
-   if (userError) {
-  if (userError.message.includes("already been registered")) {
-    await supabaseAdmin.auth.resetPasswordForEmail(email, {
-      redirectTo:
-        process.env.NEXT_PUBLIC_SITE_URL ||
-        "https://haccp-app-rouge.vercel.app",
-    });
+    if (userError) {
+      if (!userError.message.includes("already been registered")) {
+        return NextResponse.json(
+          { error: userError.message },
+          { status: 400 }
+        );
+      }
 
-    return NextResponse.json({
-      ok: true,
-      alreadyRegistered: true,
-    });
-  }
+      const existingUser = await findUserByEmail(cleanEmail);
 
-  return NextResponse.json(
-    { error: userError.message },
-    { status: 400 }
-  );
-}
+      if (!existingUser) {
+        return NextResponse.json(
+          { error: "Utente già registrato ma non trovato" },
+          { status: 400 }
+        );
+      }
 
-const userId = userData.user.id;
+      userId = existingUser.id;
+    } else {
+      userId = userData.user.id;
+    }
 
     await supabaseAdmin.from("profiles").upsert({
       id: userId,
-      email,
-      full_name: email,
+      email: cleanEmail,
+      full_name: cleanEmail,
       must_change_password: true,
     });
 
@@ -68,8 +81,21 @@ const userId = userData.user.id;
     await supabaseAdmin
       .from("invitations")
       .update({ accepted: true })
-      .eq("email", email)
+      .eq("email", cleanEmail)
       .eq("organization_id", organizationId);
+
+    if (userError) {
+      await supabaseAdmin.auth.resetPasswordForEmail(cleanEmail, {
+        redirectTo:
+          process.env.NEXT_PUBLIC_SITE_URL ||
+          "https://haccp-app-rouge.vercel.app",
+      });
+
+      return NextResponse.json({
+        ok: true,
+        alreadyRegistered: true,
+      });
+    }
 
     return NextResponse.json({
       ok: true,

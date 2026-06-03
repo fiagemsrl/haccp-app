@@ -1278,7 +1278,7 @@ if (authMode === "reset") {
                 return;
               }
 
-             alert("Sto salvando la password...");
+             alert("password salvata. Esegui Nuovo Login");
 
 
 const { data, error } = await supabase.auth.updateUser({
@@ -1762,15 +1762,9 @@ if (!user) {
           onChange={(e) => setInviteEmail(e.target.value)}
         />
 
-        <SelectInput
-          value={inviteRole}
-          onChange={(e) => setInviteRole(e.target.value)}
-        >
-          <option value="owner">Owner</option>
-          <option value="manager">Manager</option>
-          <option value="employee">Employee</option>
-          <option value="auditor">Auditor</option>
-        </SelectInput>
+       <div className="flex items-center rounded-2xl border border-slate-200 px-4 py-3 text-slate-700">
+  Collaboratore
+</div>
 
 <Button onClick={inviteCollaborator}>
   Invita
