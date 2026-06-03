@@ -1098,12 +1098,17 @@ async function resendInvitation(invite: any) {
     return;
   }
 
+if (json.alreadyRegistered) {
+  alert("Utente già registrato. Email reset password inviata.");
+} else {
   alert(
     "Invito reinviato. Password temporanea: " +
       json.temporaryPassword
   );
 }
-  function addStaff() {
+}
+
+function addStaff() {
     if (!newStaff.name.trim()) return;
     patch((prev: any) => ({ ...prev, staff: [{ id: Date.now(), ...newStaff, active: true }, ...prev.staff] }));
     setNewStaff({ name: "", role: "", trainingExpiry: "" });

@@ -30,17 +30,27 @@ export async function POST(req: Request) {
         email_confirm: true,
       });
 
-    if (
-  userError &&
-  !userError.message.includes("already been registered")
-) {
+   if (userError) {
+  if (userError.message.includes("already been registered")) {
+    await supabaseAdmin.auth.resetPasswordForEmail(email, {
+      redirectTo:
+        process.env.NEXT_PUBLIC_SITE_URL ||
+        "https://haccp-app-rouge.vercel.app",
+    });
+
+    return NextResponse.json({
+      ok: true,
+      alreadyRegistered: true,
+    });
+  }
+
   return NextResponse.json(
     { error: userError.message },
     { status: 400 }
   );
 }
 
-    const userId = userData.user.id;
+const userId = userData.user.id;
 
     await supabaseAdmin.from("profiles").upsert({
       id: userId,
