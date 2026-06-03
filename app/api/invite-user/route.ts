@@ -30,12 +30,15 @@ export async function POST(req: Request) {
         email_confirm: true,
       });
 
-    if (userError) {
-      return NextResponse.json(
-        { error: userError.message },
-        { status: 400 }
-      );
-    }
+    if (
+  userError &&
+  !userError.message.includes("already been registered")
+) {
+  return NextResponse.json(
+    { error: userError.message },
+    { status: 400 }
+  );
+}
 
     const userId = userData.user.id;
 
