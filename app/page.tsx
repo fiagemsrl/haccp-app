@@ -1043,7 +1043,7 @@ patch((prev: any) => ({
     role: inviteRole,
   }),
 });
-
+const json = await res.json();
 if (!res.ok) {
   alert("Invito salvato, ma email non inviata: " + json.error);
   return;
@@ -1069,6 +1069,40 @@ alert(
 );
  });
 } 
+async function resendInvitation(invite: any) {
+  const organizationId =
+    organization?.organization_id ||
+    localStorage.getItem("organization_id");
+
+  if (!organizationId) {
+    alert("Organizzazione mancante");
+    return;
+  }
+
+  const res = await fetch("/api/invite-user", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      email: invite.email,
+      organizationId,
+      role: invite.role,
+    }),
+  });
+
+  const json = await res.json();
+
+  if (!res.ok) {
+    alert("Errore reinvio: " + json.error);
+    return;
+  }
+
+  alert(
+    "Invito reinviato. Password temporanea: " +
+      json.temporaryPassword
+  );
+}
   function addStaff() {
     if (!newStaff.name.trim()) return;
     patch((prev: any) => ({ ...prev, staff: [{ id: Date.now(), ...newStaff, active: true }, ...prev.staff] }));
