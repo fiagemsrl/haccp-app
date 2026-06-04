@@ -1211,7 +1211,52 @@ function addStaff() {
   }));
 }
 
-  function exportBackup() {
+  async function generateHistoricData() {
+  if (!user || !organization?.organization_id) {
+    alert("Utente o organizzazione mancante");
+    return;
+  }
+
+  const ok = confirm(
+    "Vuoi generare lo storico HACCP dal 01/01/2024 al 03/06/2026? L'operazione aggiungerà molti dati."
+  );
+
+  if (!ok) return;
+
+  const res = await fetch("/api/generate-history", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      organizationId: organization.organization_id,
+      userId: user.id,
+    }),
+  });
+
+  const json = await res.json();
+
+  if (!res.ok) {
+    alert("Errore generazione storico: " + json.error);
+    return;
+  }
+
+  alert(
+    "Storico generato: " +
+      json.temperatures +
+      " temperature, " +
+      json.checklist +
+      " checklist, " +
+      json.nonConformities +
+      " non conformità."
+  );
+
+  await loadTemperatures();
+  await loadChecklist();
+  await loadNonConformities();
+}
+
+function exportBackup() {
     downloadTextFile(`haccp-backup-${today}.json`, JSON.stringify(state, null, 2), "application/json");
   }
 
@@ -1876,7 +1921,20 @@ if (!user) {
   </>
 )}
 
-          {page === "settings" && <><SectionTitle title="Impostazioni ristorante" subtitle="Configura attività, soglie HACCP e dati locali." action={<Button variant="danger" onClick={resetDemo}>Reset demo</Button>} /><Card><div className="space-y-4 p-5"><div className="grid gap-4 md:grid-cols-2"><div><label className="text-sm font-medium">Nome attività</label><TextInput className="mt-2" value={state.restaurant.name} onChange={(e) => patch((prev: any) => ({ ...prev, restaurant: { ...prev.restaurant, name: e.target.value } }))} /></div><div><label className="text-sm font-medium">Responsabile HACCP</label><TextInput className="mt-2" value={organizationData?.manager_name ||
+          {page === "settings" && <><SectionTitle title="Impostazioni ristorante" subtitle="Configura attività, soglie HACCP e dati locali." action={
+  <div className="flex gap-2">
+    <Button
+      variant="secondary"
+      onClick={generateHistoricData}
+    >
+      Genera storico HACCP
+    </Button>
+
+    <Button variant="danger" onClick={resetDemo}>
+      Reset demo
+    </Button>
+  </div>
+} /><Card><div className="space-y-4 p-5"><div className="grid gap-4 md:grid-cols-2"><div><label className="text-sm font-medium">Nome attività</label><TextInput className="mt-2" value={state.restaurant.name} onChange={(e) => patch((prev: any) => ({ ...prev, restaurant: { ...prev.restaurant, name: e.target.value } }))} /></div><div><label className="text-sm font-medium">Responsabile HACCP</label><TextInput className="mt-2" value={organizationData?.manager_name ||
   state.restaurant.haccpManager} onChange={(e) => patch((prev: any) => ({ ...prev, restaurant: { ...prev.restaurant, haccpManager: e.target.value } }))} /></div><div><label className="text-sm font-medium">Indirizzo</label><TextInput className="mt-2" value={state.restaurant.address} onChange={(e) => patch((prev: any) => ({ ...prev, restaurant: { ...prev.restaurant, address: e.target.value } }))} /></div><div><label className="text-sm font-medium">Utente corrente</label><TextInput className="mt-2" value={state.currentUser} onChange={(e) => patch({ currentUser: e.target.value })} /></div><div><label className="text-sm font-medium">Limite frigo positivo °C</label><TextInput className="mt-2" type="number" value={state.restaurant.fridgeLimit} onChange={(e) => patch((prev: any) => ({ ...prev, restaurant: { ...prev.restaurant, fridgeLimit: Number(e.target.value) } }))} /></div><div><label className="text-sm font-medium">Limite freezer °C</label><TextInput className="mt-2" type="number" value={state.restaurant.freezerLimit} onChange={(e) => patch((prev: any) => ({ ...prev, restaurant: { ...prev.restaurant, freezerLimit: Number(e.target.value) } }))} /></div></div><p className="text-sm text-slate-500">I dati sono salvati nel browser con localStorage. In produzione verranno salvati su Supabase con login, permessi e storage PDF.</p></div></Card></>}
         </main>
       </div>
