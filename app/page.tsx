@@ -1218,28 +1218,33 @@ function addStaff() {
   }
 
   const ok = confirm(
-    "Vuoi generare lo storico HACCP dal 01/01/2024 al 03/06/2026? L'operazione aggiungerà molti dati."
-  );
+  "Vuoi generare lo storico HACCP dal 01/01/2024 al 03/06/2026? L'operazione aggiungerà molti dati."
+);
 
-  if (!ok) return;
+if (!ok) return;
 
-  const res = await fetch("/api/generate-history", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      organizationId: organization.organization_id,
-      userId: user.id,
-    }),
-  });
+alert("Richiesta inviata, attendo risposta...");
 
-  const json = await res.json();
+const res = await fetch("/api/generate-history", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    organizationId: organization.organization_id,
+    userId: user.id,
+  }),
+});
 
-  if (!res.ok) {
-    alert("Errore generazione storico: " + json.error);
-    return;
-  }
+const json = await res.json();
+
+console.log("GENERATE HISTORY RESPONSE:", json);
+alert("Risposta ricevuta");
+
+if (!res.ok) {
+  alert("Errore generazione storico: " + json.error);
+  return;
+}
 
   alert(
     "Storico generato: " +
