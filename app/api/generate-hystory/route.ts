@@ -27,11 +27,9 @@ function isOpenDay(date: Date) {
 
   const summer = month >= 6 && month <= 10;
 
-  if (summer) {
-    return day !== 1; // lunedì chiuso
-  }
+  if (summer) return day !== 1;
 
-  return day === 5 || day === 6 || day === 0; // ven-sab-dom
+  return day === 5 || day === 6 || day === 0;
 }
 
 function getTemperature(area: string) {
@@ -52,29 +50,50 @@ function addDays(date: Date, days: number) {
   return copy;
 }
 
+function chunkArray<T>(array: T[], size: number) {
+  const chunks: T[][] = [];
+
+  for (let i = 0; i < array.length; i += size) {
+    chunks.push(array.slice(i, i + size));
+  }
+
+  return chunks;
+}
+
+async function insertChunks(table: string, rows: any[]) {
+  const chunks = chunkArray(rows, 500);
+
+  for (const chunk of chunks) {
+    const { error } = await supabaseAdmin
+      .from(table)
+      .insert(chunk);
+
+    if (error) throw error;
+  }
+}
+
 export async function POST(req: Request) {
   try {
-    const { organizationId, userId } = await req.json();
+    const { organizationId, userId, year } = await req.json();
 
-    if (!organizationId || !userId) {
+    if (!organizationId || !userId || !year) {
       return NextResponse.json(
-        { error: "organizationId o userId mancante" },
+        { error: "organizationId, userId o year mancante" },
         { status: 400 }
       );
     }
 
-    const start = new Date("2024-01-01");
-    const end = new Date("2026-06-03");
+    const start = new Date(`${year}-01-01`);
+    const end =
+      Number(year) === 2026
+        ? new Date("2026-06-03")
+        : new Date(`${year}-12-31`);
 
     const temperatures: any[] = [];
     const checklist: any[] = [];
     const nonConformities: any[] = [];
 
-    for (
-      let date = start;
-      date <= end;
-      date = addDays(date, 1)
-    ) {
+    for (let date = start; date <= end; date = addDays(date, 1)) {
       if (!isOpenDay(date)) continue;
 
       const iso = date.toISOString();
@@ -145,7 +164,8 @@ export async function POST(req: Request) {
         checklist.push({
           organization_id: organizationId,
           user_id: userId,
-          title: "Pulizia straordinaria settimanale cucina, friggitrice, forno e piani lavoro",
+          title:
+            "Pulizia straordinaria settimanale cucina, friggitrice, forno e piani lavoro",
           area: "Cucina",
           frequency: "Settimanale",
           critical: false,
@@ -156,20 +176,13 @@ export async function POST(req: Request) {
       }
     }
 
-    const ncDates = [
-      "2024-02-18",
-      "2024-04-07",
-      "2024-07-21",
-      "2024-10-13",
-      "2025-01-19",
-      "2025-04-06",
-      "2025-08-17",
-      "2025-11-09",
-      "2026-02-15",
-      "2026-05-10",
-    ];
+    const ncByYear: Record<string, string[]> = {
+      "2024": ["2024-02-18", "2024-04-07", "2024-07-21", "2024-10-13"],
+      "2025": ["2025-01-19", "2025-04-06", "2025-08-17", "2025-11-09"],
+      "2026": ["2026-02-15", "2026-05-10"],
+    };
 
-    for (const d of ncDates) {
+    for (const d of ncByYear[String(year)] || []) {
       nonConformities.push({
         organization_id: organizationId,
         user_id: userId,
@@ -183,20 +196,13 @@ export async function POST(req: Request) {
       });
     }
 
-    await supabaseAdmin
-      .from("temperatures")
-      .insert(temperatures);
-
-    await supabaseAdmin
-      .from("checklist_items")
-      .insert(checklist);
-
-    await supabaseAdmin
-      .from("non_conformities")
-      .insert(nonConformities);
+    await insertChunks("temperatures", temperatures);
+    await insertChunks("checklist_items", checklist);
+    await insertChunks("non_conformities", nonConformities);
 
     return NextResponse.json({
       ok: true,
+      year,
       temperatures: temperatures.length,
       checklist: checklist.length,
       nonConformities: nonConformities.length,

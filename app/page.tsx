@@ -1218,41 +1218,51 @@ function addStaff() {
   }
 
   const ok = confirm(
-  "Vuoi generare lo storico HACCP dal 01/01/2024 al 03/06/2026? L'operazione aggiungerà molti dati."
-);
+    "Vuoi generare lo storico HACCP dal 01/01/2024 al 03/06/2026? L'operazione aggiungerà molti dati."
+  );
 
-if (!ok) return;
+  if (!ok) return;
 
-alert("Richiesta inviata, attendo risposta...");
+  const years = [2024, 2025, 2026];
 
-const res = await fetch("/api/generate-history", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    organizationId: organization.organization_id,
-    userId: user.id,
-  }),
-});
+  let totalTemperatures = 0;
+  let totalChecklist = 0;
+  let totalNonConformities = 0;
 
-const json = await res.json();
+  for (const year of years) {
+    alert("Genero anno " + year + "...");
 
-console.log("GENERATE HISTORY RESPONSE:", json);
-alert("Risposta ricevuta");
+    const res = await fetch("/api/generate-history", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        organizationId: organization.organization_id,
+        userId: user.id,
+        year,
+      }),
+    });
 
-if (!res.ok) {
-  alert("Errore generazione storico: " + json.error);
-  return;
-}
+    const json = await res.json();
+
+    if (!res.ok) {
+      alert("Errore anno " + year + ": " + json.error);
+      return;
+    }
+
+    totalTemperatures += json.temperatures;
+    totalChecklist += json.checklist;
+    totalNonConformities += json.nonConformities;
+  }
 
   alert(
     "Storico generato: " +
-      json.temperatures +
+      totalTemperatures +
       " temperature, " +
-      json.checklist +
+      totalChecklist +
       " checklist, " +
-      json.nonConformities +
+      totalNonConformities +
       " non conformità."
   );
 
