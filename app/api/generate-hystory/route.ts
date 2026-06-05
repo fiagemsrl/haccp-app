@@ -75,8 +75,12 @@ async function insertChunks(table: string, rows: any[]) {
 export async function POST(req: Request) {
   try {
     const { organizationId, userId, year } = await req.json();
-
-    if (!organizationId || !userId || !year) {
+    console.log("START GENERATE HISTORY", {
+  organizationId,
+  userId,
+  year,
+});
+if (!organizationId || !userId || !year) {
       return NextResponse.json(
         { error: "organizationId, userId o year mancante" },
         { status: 400 }
@@ -196,21 +200,41 @@ export async function POST(req: Request) {
       });
     }
 
-    await insertChunks("temperatures", temperatures);
-    await insertChunks("checklist_items", checklist);
-    await insertChunks("non_conformities", nonConformities);
+    console.log("RIGHE GENERATE", {
+  temperatures: temperatures.length,
+  checklist: checklist.length,
+  nonConformities: nonConformities.length,
+});
 
-    return NextResponse.json({
-      ok: true,
-      year,
-      temperatures: temperatures.length,
-      checklist: checklist.length,
-      nonConformities: nonConformities.length,
-    });
+console.log("INSERT TEMPERATURES START");
+await insertChunks("temperatures", temperatures);
+console.log("INSERT TEMPERATURES END");
+
+console.log("INSERT CHECKLIST START");
+await insertChunks("checklist_items", checklist);
+console.log("INSERT CHECKLIST END");
+
+console.log("INSERT NON CONFORMITIES START");
+await insertChunks("non_conformities", nonConformities);
+console.log("INSERT NON CONFORMITIES END");
+
+   return NextResponse.json({
+  success: true,
+  year,
+  temperatures: temperatures.length,
+  checklist: checklist.length,
+  nonConformities: nonConformities.length,
+});
   } catch (err: any) {
-    return NextResponse.json(
-      { error: err.message },
-      { status: 500 }
-    );
-  }
+  console.error("ERRORE GENERATE HISTORY", err);
+
+  return NextResponse.json(
+    {
+      success: false,
+      error: err.message,
+      details: err,
+    },
+    { status: 500 }
+  );
+}
 }
