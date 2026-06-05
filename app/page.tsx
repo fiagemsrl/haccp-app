@@ -1218,7 +1218,7 @@ function addStaff() {
   }
 
   const ok = confirm(
-    "Vuoi generare lo storico HACCP dal 01/01/2024 al 03/06/2026? L'operazione aggiungerà molti dati."
+    "Vuoi generare lo storico HACCP dal 01/01/2024 al 03/06/2026?"
   );
 
   if (!ok) return;
@@ -1230,30 +1230,59 @@ function addStaff() {
   let totalNonConformities = 0;
 
   for (const year of years) {
-    alert("Genero anno " + year + "...");
+    try {
+      alert("Inizio generazione anno " + year);
 
-    const res = await fetch("/api/generate-history", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        organizationId: organization.organization_id,
-        userId: user.id,
-        year,
-      }),
-    });
+      const res = await fetch("/api/generate-history", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          organizationId: organization.organization_id,
+          userId: user.id,
+          year,
+        }),
+      });
 
-    const json = await res.json();
+      const text = await res.text();
 
-    if (!res.ok) {
-      alert("Errore anno " + year + ": " + json.error);
+      console.log("STATUS ANNO", year, res.status);
+      console.log("RISPOSTA RAW ANNO", year, text);
+
+      let json: any = {};
+
+      try {
+        json = text ? JSON.parse(text) : {};
+      } catch {
+        alert(
+          "La API non ha restituito JSON valido per anno " +
+            year +
+            ". Controlla Console e Vercel Logs."
+        );
+        return;
+      }
+
+      if (!res.ok || !json.success) {
+        alert(
+          "Errore anno " +
+            year +
+            ": " +
+            (json.error || text || "Errore sconosciuto")
+        );
+        return;
+      }
+
+      totalTemperatures += Number(json.temperatures || 0);
+      totalChecklist += Number(json.checklist || 0);
+      totalNonConformities += Number(json.nonConformities || 0);
+
+      alert("Anno " + year + " completato");
+    } catch (error: any) {
+      console.error("Errore generazione anno", year, error);
+      alert("Errore bloccante anno " + year + ": " + error.message);
       return;
     }
-
-    totalTemperatures += json.temperatures;
-    totalChecklist += json.checklist;
-    totalNonConformities += json.nonConformities;
   }
 
   alert(
