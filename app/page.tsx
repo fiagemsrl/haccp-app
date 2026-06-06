@@ -489,6 +489,7 @@ async function loadTemperatures() {
     .select("*")
     .eq("organization_id", organization.organization_id)
     .order("created_at", { ascending: false });
+.range(0, 10000);
 
   if (data) {
     patch((prev: any) => ({
@@ -516,6 +517,7 @@ async function loadChecklist() {
     .select("*")
     .eq("organization_id", organization.organization_id)
     .order("created_at", { ascending: false });
+.range(0, 10000);
 
   if (data) {
     patch((prev: any) => ({
@@ -567,6 +569,7 @@ async function loadNonConformities() {
     .select("*")
     .eq("organization_id", organization.organization_id)
     .order("created_at", { ascending: false });
+.range(0, 10000);
 
   if (data) {
     patch((prev: any) => ({
@@ -599,6 +602,7 @@ async function loadInvitations() {
     .select("*")
     .eq("organization_id", organizationId)
     .order("created_at", { ascending: false });
+.range(0, 10000);
 
 if (error) {
   alert("Errore caricamento inviti: " + error.message);
