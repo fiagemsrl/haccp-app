@@ -343,7 +343,7 @@ export default function HaccpRestaurantApp() {
   const [mounted, setMounted] = useState(false);
   const [page, setPage] = useState("dashboard");
   const [query, setQuery] = useState("");
-  const [selectedYear, setSelectedYear] = useState("2026");
+  const [selectedYear, setSelectedYear] = useState("all");
   const [newTemp, setNewTemp] = useState({ area: "", value: "", operator: state.currentUser });
   const [newProduct, setNewProduct] = useState({ name: "", lot: "", expiry: "", location: "", quantity: "" });
   const [newNc, setNewNc] = useState({ title: "", severity: "Media", action: "", operator: state.currentUser });
@@ -736,18 +736,26 @@ const alerts =
   state.nonConformities.filter((nonConformity: any) => nonConformity.status !== "Chiusa").length;
   const progress = calculateProgress(state.tasks);
   const filteredProducts = useMemo(() => filterProducts(state.products, query), [state.products, query]);
-const filteredTemperatures = state.temperatures.filter(
-  (t: any) => String(t.date).startsWith(selectedYear)
-);
+const filteredTemperatures =
+  selectedYear === "all"
+    ? state.temperatures
+    : state.temperatures.filter((t: any) =>
+        String(t.date).startsWith(selectedYear)
+      );
 
-const filteredTasks = state.tasks.filter(
-  (t: any) => String(t.date).startsWith(selectedYear)
-);
+const filteredTasks =
+  selectedYear === "all"
+    ? state.tasks
+    : state.tasks.filter((t: any) =>
+        String(t.date).startsWith(selectedYear)
+      );
 
-const filteredNonConformities = state.nonConformities.filter(
-  (n: any) => String(n.date).startsWith(selectedYear)
-);
-const YearFilter = (
+const filteredNonConformities =
+  selectedYear === "all"
+    ? state.nonConformities
+    : state.nonConformities.filter((n: any) =>
+        String(n.date).startsWith(selectedYear)
+      );const YearFilter = (
   <div className="mb-4 max-w-xs">
     <SelectInput
       value={selectedYear}
@@ -756,6 +764,7 @@ const YearFilter = (
       <option value="2026">2026</option>
       <option value="2025">2025</option>
       <option value="2024">2024</option>
+<option value="all">Tutti gli anni</option>
     </SelectInput>
   </div>
 );
