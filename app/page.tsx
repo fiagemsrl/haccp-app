@@ -344,6 +344,7 @@ export default function HaccpRestaurantApp() {
   const [page, setPage] = useState("dashboard");
   const [query, setQuery] = useState("");
   const [selectedYear, setSelectedYear] = useState("all");
+  const [selectedMonth, setSelectedMonth] = useState("all");
   const [newTemp, setNewTemp] = useState({ area: "", value: "", operator: state.currentUser });
   const [newProduct, setNewProduct] = useState({ name: "", lot: "", expiry: "", location: "", quantity: "" });
   const [newNc, setNewNc] = useState({ title: "", severity: "Media", action: "", operator: state.currentUser });
@@ -786,39 +787,56 @@ const alerts =
   state.nonConformities.filter((nonConformity: any) => nonConformity.status !== "Chiusa").length;
   const progress = calculateProgress(state.tasks);
   const filteredProducts = useMemo(() => filterProducts(state.products, query), [state.products, query]);
-const filteredTemperatures =
-  selectedYear === "all"
-    ? state.temperatures
-    : state.temperatures.filter((t: any) =>
-        String(t.date).startsWith(selectedYear)
-      );
+function matchYearMonth(item: any) {
+  const date = String(item.date || "");
 
-const filteredTasks =
-  selectedYear === "all"
-    ? state.tasks
-    : state.tasks.filter((t: any) =>
-        String(t.date).startsWith(selectedYear)
-      );
+  const matchYear =
+    selectedYear === "all" || date.startsWith(selectedYear);
 
-const filteredNonConformities =
-  selectedYear === "all"
-    ? state.nonConformities
-    : state.nonConformities.filter((n: any) =>
-        String(n.date).startsWith(selectedYear)
-      );const YearFilter = (
-  <div className="mb-4 max-w-xs">
+  const matchMonth =
+    selectedMonth === "all" || date.slice(5, 7) === selectedMonth;
+
+  return matchYear && matchMonth;
+}
+
+const filteredTemperatures = state.temperatures.filter(matchYearMonth);
+const filteredTasks = state.tasks.filter(matchYearMonth);
+const filteredNonConformities = state.nonConformities.filter(matchYearMonth);
+const YearFilter = (
+  <div className="mb-4 grid max-w-md grid-cols-2 gap-3">
     <SelectInput
       value={selectedYear}
-      onChange={(e) => setSelectedYear(e.target.value)}
+      onChange={(e) => {
+        setSelectedYear(e.target.value);
+        setSelectedMonth("all");
+      }}
     >
+      <option value="all">Tutti gli anni</option>
       <option value="2026">2026</option>
       <option value="2025">2025</option>
       <option value="2024">2024</option>
-<option value="all">Tutti gli anni</option>
+    </SelectInput>
+
+    <SelectInput
+      value={selectedMonth}
+      onChange={(e) => setSelectedMonth(e.target.value)}
+    >
+      <option value="all">Tutti i mesi</option>
+      <option value="01">Gennaio</option>
+      <option value="02">Febbraio</option>
+      <option value="03">Marzo</option>
+      <option value="04">Aprile</option>
+      <option value="05">Maggio</option>
+      <option value="06">Giugno</option>
+      <option value="07">Luglio</option>
+      <option value="08">Agosto</option>
+      <option value="09">Settembre</option>
+      <option value="10">Ottobre</option>
+      <option value="11">Novembre</option>
+      <option value="12">Dicembre</option>
     </SelectInput>
   </div>
-);
-  const expiringDocs = state.documents.filter((doc: any) => daysUntil(doc.expiry) <= 45).length;
+);  const expiringDocs = state.documents.filter((doc: any) => daysUntil(doc.expiry) <= 45).length;
 const temperatureChartData = state.temperatures
   .slice(-7)
   .map((t: any) => ({
