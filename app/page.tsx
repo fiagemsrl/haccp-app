@@ -484,7 +484,7 @@ useEffect(() => {
 async function loadTemperatures() {
   if (!user || !organization) return;
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("temperatures")
     .select("*")
     .eq("organization_id", organization.organization_id)
@@ -517,7 +517,7 @@ if (error) {
 async function loadChecklist() {
   if (!user || !organization) return;
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("checklist_items")
     .select("*")
     .eq("organization_id", organization.organization_id)
@@ -570,7 +570,7 @@ async function loadDocuments() {
 async function loadNonConformities() {
   if (!user || !organization) return;
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("non_conformities")
     .select("*")
     .eq("organization_id", organization.organization_id)
