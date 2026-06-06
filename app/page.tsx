@@ -491,6 +491,10 @@ async function loadTemperatures() {
     .order("created_at", { ascending: false }).range(0, 10000);
 console.log("TEMPERATURES DATA", data);
 console.log("TEMPERATURES ERROR", error);
+if (error) {
+  alert("Errore caricamento temperature: " + error.message);
+  return;
+}
 
   if (data) {
     patch((prev: any) => ({
@@ -574,7 +578,11 @@ async function loadNonConformities() {
 .range(0, 10000);
 console.log("NC DATA", data);
 console.log("NC ERROR", error);
-  if (data) {
+  if (error) {
+  alert("Errore caricamento non conformità: " + error.message);
+  return;
+}
+if (data) {
     patch((prev: any) => ({
       ...prev,
       nonConformities: data.map((n: any) => ({
@@ -909,7 +917,10 @@ async function addTemperature() {
 
   console.log("Supabase data:", data);
   console.log("Supabase error:", error);
-  
+  if (error) {
+  alert("Errore caricamento temperature: " + error.message);
+  return;
+}
   await loadTemperatures();
 
   setNewTemp({ area: "", value: "", operator: state.currentUser });
