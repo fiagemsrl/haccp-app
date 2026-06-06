@@ -481,65 +481,82 @@ useEffect(() => {
   }
 }, [state, mounted]);
 
-async function loadTemperatures() {
-  if (!user || !organization) return;
-
-  const { data, error } = await supabase
-    .from("temperatures")
-    .select("*")
-    .eq("organization_id", organization.organization_id)
-    .order("created_at", { ascending: true }).range(0, 50000);
-console.log("TEMPERATURES DATA", data);
-console.log("TEMPERATURES ERROR", error);
-if (error) {
-  alert("Errore caricamento temperature: " + error.message);
-  return;
-}
-
-  if (data) {
-    patch((prev: any) => ({
-      ...prev,
-      temperatures: data.map((t: any) => ({
-        id: t.id,
-        area: t.area,
-        value: t.value,
-        operator: t.operator,
-        status: t.status,
-        date: new Date(t.created_at).toISOString().slice(0, 10),
-        time: new Date(t.created_at).toTimeString().slice(0, 5),
-        min: 0,
-        max: 4,
-      })),
-    }));
-  }
-}
-
 async function loadChecklist() {
   if (!user || !organization) return;
 
-  const { data, error } = await supabase
-    .from("checklist_items")
-    .select("*")
-    .eq("organization_id", organization.organization_id)
-    .order("created_at", { ascending: true })
-.range(0, 50000);
-console.log("CHECKLIST DATA", data);
-console.log("CHECKLIST ERROR", error);
-  if (data) {
-    patch((prev: any) => ({
-      ...prev,
-      tasks: data.map((item: any) => ({
-        id: item.id,
-        title: item.title,
-        area: item.area,
-        frequency: item.frequency,
-        done: item.done,
-        critical: item.critical,
-        operator: item.operator || "",
-        date: new Date(item.created_at).toISOString().slice(0, 10),
-      })),
-    }));
+  const years = ["2024", "2025", "2026"];
+  let allData: any[] = [];
+
+  for (const y of years) {
+    const { data, error } = await supabase
+      .from("checklist_items")
+      .select("*")
+      .eq("organization_id", organization.organization_id)
+      .gte("created_at", `${y}-01-01T00:00:00.000Z`)
+      .lte("created_at", `${y}-12-31T23:59:59.999Z`)
+      .order("created_at", { ascending: false })
+      .range(0, 10000);
+
+    if (error) {
+      alert("Errore caricamento checklist: " + error.message);
+      return;
+    }
+
+    allData.push(...(data || []));
   }
+
+  patch((prev: any) => ({
+    ...prev,
+    tasks: allData.map((item: any) => ({
+      id: item.id,
+      title: item.title,
+      area: item.area,
+      frequency: item.frequency,
+      done: item.done,
+      critical: item.critical,
+      operator: item.operator || "",
+      date: new Date(item.created_at).toISOString().slice(0, 10),
+    })),
+  }));
+}
+async function loadTemperatures() {
+  if (!user || !organization) return;
+
+  const years = ["2024", "2025", "2026"];
+  let allData: any[] = [];
+
+  for (const y of years) {
+    const { data, error } = await supabase
+      .from("temperatures")
+      .select("*")
+      .eq("organization_id", organization.organization_id)
+      .gte("created_at", `${y}-01-01T00:00:00.000Z`)
+      .lte("created_at", `${y}-12-31T23:59:59.999Z`)
+      .order("created_at", { ascending: false })
+      .range(0, 10000);
+
+    if (error) {
+      alert("Errore caricamento temperature: " + error.message);
+      return;
+    }
+
+    allData.push(...(data || []));
+  }
+
+  patch((prev: any) => ({
+    ...prev,
+    temperatures: allData.map((t: any) => ({
+      id: t.id,
+      area: t.area,
+      value: t.value,
+      operator: t.operator,
+      status: t.status,
+      date: new Date(t.created_at).toISOString().slice(0, 10),
+      time: new Date(t.created_at).toTimeString().slice(0, 5),
+      min: 0,
+      max: 4,
+    })),
+  }));
 }
 
 async function loadDocuments() {
@@ -570,38 +587,41 @@ async function loadDocuments() {
 async function loadNonConformities() {
   if (!user || !organization) return;
 
-  const { data, error } = await supabase
-    .from("non_conformities")
-    .select("*")
-    .eq("organization_id", organization.organization_id)
-    .order("created_at", { ascending: true })
-.range(0, 50000);
-console.log("NC DATA", data);
-console.log("NC ERROR", error);
-  if (error) {
-  alert("Errore caricamento non conformità: " + error.message);
-  return;
-}
-if (data) {
-    patch((prev: any) => ({
-      ...prev,
-      nonConformities: data.map((n: any) => ({
-        id: n.id,
-        title: n.title,
-        severity: n.severity,
-        action: n.action,
-        status: n.status,
-        operator: n.operator,
-        photoUrl: n.photo_url,
-        date: new Date(n.created_at)
-          .toISOString()
-          .slice(0, 10),
-      })),
-    }));
-  }
-}
+  const years = ["2024", "2025", "2026"];
+  let allData: any[] = [];
 
-async function loadInvitations() {
+  for (const y of years) {
+    const { data, error } = await supabase
+      .from("non_conformities")
+      .select("*")
+      .eq("organization_id", organization.organization_id)
+      .gte("created_at", `${y}-01-01T00:00:00.000Z`)
+      .lte("created_at", `${y}-12-31T23:59:59.999Z`)
+      .order("created_at", { ascending: false })
+      .range(0, 10000);
+
+    if (error) {
+      alert("Errore caricamento non conformità: " + error.message);
+      return;
+    }
+
+    allData.push(...(data || []));
+  }
+
+  patch((prev: any) => ({
+    ...prev,
+    nonConformities: allData.map((n: any) => ({
+      id: n.id,
+      title: n.title,
+      severity: n.severity,
+      action: n.action,
+      status: n.status,
+      operator: n.operator,
+      photoUrl: n.photo_url,
+      date: new Date(n.created_at).toISOString().slice(0, 10),
+    })),
+  }));
+}async function loadInvitations() {
   const organizationId =
     organization?.organization_id ||
     localStorage.getItem("organization_id");
