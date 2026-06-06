@@ -489,6 +489,8 @@ async function loadTemperatures() {
     .select("*")
     .eq("organization_id", organization.organization_id)
     .order("created_at", { ascending: false }).range(0, 10000);
+console.log("TEMPERATURES DATA", data);
+console.log("TEMPERATURES ERROR", error);
 
   if (data) {
     patch((prev: any) => ({
@@ -517,7 +519,8 @@ async function loadChecklist() {
     .eq("organization_id", organization.organization_id)
     .order("created_at", { ascending: false })
 .range(0, 10000);
-
+console.log("CHECKLIST DATA", data);
+console.log("CHECKLIST ERROR", error);
   if (data) {
     patch((prev: any) => ({
       ...prev,
@@ -569,7 +572,8 @@ async function loadNonConformities() {
     .eq("organization_id", organization.organization_id)
     .order("created_at", { ascending: false })
 .range(0, 10000);
-
+console.log("NC DATA", data);
+console.log("NC ERROR", error);
   if (data) {
     patch((prev: any) => ({
       ...prev,
