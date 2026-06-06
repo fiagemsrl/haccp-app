@@ -488,7 +488,7 @@ async function loadTemperatures() {
     .from("temperatures")
     .select("*")
     .eq("organization_id", organization.organization_id)
-    .order("created_at", { ascending: false }).range(0, 10000);
+    .order("created_at", { ascending: true }).range(0, 50000);
 console.log("TEMPERATURES DATA", data);
 console.log("TEMPERATURES ERROR", error);
 if (error) {
@@ -521,8 +521,8 @@ async function loadChecklist() {
     .from("checklist_items")
     .select("*")
     .eq("organization_id", organization.organization_id)
-    .order("created_at", { ascending: false })
-.range(0, 10000);
+    .order("created_at", { ascending: true })
+.range(0, 50000);
 console.log("CHECKLIST DATA", data);
 console.log("CHECKLIST ERROR", error);
   if (data) {
@@ -574,8 +574,8 @@ async function loadNonConformities() {
     .from("non_conformities")
     .select("*")
     .eq("organization_id", organization.organization_id)
-    .order("created_at", { ascending: false })
-.range(0, 10000);
+    .order("created_at", { ascending: true })
+.range(0, 50000);
 console.log("NC DATA", data);
 console.log("NC ERROR", error);
   if (error) {
@@ -612,7 +612,7 @@ async function loadInvitations() {
     .from("invitations")
     .select("*")
     .eq("organization_id", organizationId)
-    .order("created_at", { ascending: false }).range(0, 10000);
+    .order("created_at", { ascending: true }).range(0, 50000);
 
 if (error) {
   alert("Errore caricamento inviti: " + error.message);
