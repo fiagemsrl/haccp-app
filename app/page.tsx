@@ -401,6 +401,7 @@ const hash = window.location.hash;
       setSubscription(sub);
     }
   }
+setMounted(true);
 });
 
 const { data: listener } = supabase.auth.onAuthStateChange(
@@ -434,6 +435,8 @@ const { data: listener } = supabase.auth.onAuthStateChange(
         setSubscription(sub);
       }
     }
+
+    setMounted(true);
   }
 );
 
@@ -441,10 +444,6 @@ return () => {
   listener.subscription.unsubscribe();
 };
 }, []);
-useEffect(() => {
-  setMounted(true);
-}, []);
-
 async function loadChecklist() {
   if (!user || !organization) return;
 
