@@ -367,113 +367,83 @@ async function acceptPendingInvitation(currentUser: any) {
     role: invitation.role,
   };
 }
-useEffect(() => {  
-const hash = window.location.hash;
+useEffect(() => {
+  const hash = window.location.hash;
   const search = window.location.search;
 
-  if (
-    hash.includes("type=recovery") ||
-    search.includes("type=recovery")
-  ) {
+  if (hash.includes("type=recovery") || search.includes("type=recovery")) {
     setAuthMode("reset");
   }
-  supabase.auth.getUser().then(async ({ data }) => {
-  setUser(data.user);
 
-  if (data.user) {
-    let orgData = await getCurrentOrganizationId(data.user.id);
+  async function loadAuthAndOrganization(currentUser: any, source: string) {
+    if (!currentUser) return;
+
+    const orgData = await getCurrentOrganizationId(currentUser.id);
+
+    console.log("ORGDATA " + source, orgData);
 
     if (!orgData?.organization_id) {
-      orgData = await acceptPendingInvitation(data.user);
+      setOrganization(null);
+      setOrganizationData(null);
+      setSubscription({ status: "active", plan: "free" });
+      return;
     }
-
-    console.log("ORGDATA GETUSER", orgData);
 
     setOrganization(orgData);
 
-    if (orgData?.organization_id) {
-      const details = await getOrganizationDetails(orgData.organization_id);
-      console.log("DETAILS GETUSER", details);
+    const details = await getOrganizationDetails(orgData.organization_id);
+    console.log("DETAILS " + source, details);
 
-      setOrganizationData(details);
+    setOrganizationData(details);
 
+    try {
+      const sub = await getSubscriptionStatus(orgData.organization_id);
+      setSubscription(sub || { status: "active", plan: "free" });
+    } catch (error) {
+      console.error("SUBSCRIPTION ERROR " + source, error);
+      setSubscription({ status: "active", plan: "free" });
+    }
+  }
+
+  supabase.auth.getUser().then(async ({ data }) => {
+    try {
+      setUser(data.user);
+
+      if (data.user) {
+        await loadAuthAndOrganization(data.user, "GETUSER");
+      }
+    } catch (error) {
+      console.error("AUTH GETUSER ERROR", error);
+    } finally {
+      setMounted(true);
+    }
+  });
+
+  const { data: listener } = supabase.auth.onAuthStateChange(
+    async (_event, session) => {
       try {
-        const sub = await getSubscriptionStatus(orgData.organization_id);
+        console.log("AUTH EVENT:", _event);
 
-        setSubscription(
-          sub || {
-            status: "active",
-            plan: "free",
-          }
-        );
-      } catch (error) {
-        console.error("SUBSCRIPTION ERROR GETUSER", error);
-
-        setSubscription({
-          status: "active",
-          plan: "free",
-        });
-      }
-    }
-  }
-
-  setMounted(true);
-});
-
-const { data: listener } = supabase.auth.onAuthStateChange(
-  async (_event, session) => {
-    console.log("AUTH EVENT:", _event);
-
-    if (_event === "PASSWORD_RECOVERY") {
-      setAuthMode("reset");
-    }
-
-    setUser(session?.user ?? null);
-
-    if (session?.user) {
-      let orgData = await getCurrentOrganizationId(session.user.id);
-
-      if (!orgData?.organization_id) {
-        orgData = await acceptPendingInvitation(session.user);
-      }
-
-      console.log("ORGDATA LISTENER", orgData);
-
-      setOrganization(orgData);
-
-      if (orgData?.organization_id) {
-        const details = await getOrganizationDetails(orgData.organization_id);
-        console.log("DETAILS LISTENER", details);
-
-        setOrganizationData(details);
-
-        try {
-          const sub = await getSubscriptionStatus(orgData.organization_id);
-
-          setSubscription(
-            sub || {
-              status: "active",
-              plan: "free",
-            }
-          );
-        } catch (error) {
-          console.error("SUBSCRIPTION ERROR LISTENER", error);
-
-          setSubscription({
-            status: "active",
-            plan: "free",
-          });
+        if (_event === "PASSWORD_RECOVERY") {
+          setAuthMode("reset");
         }
+
+        setUser(session?.user ?? null);
+
+        if (session?.user) {
+          await loadAuthAndOrganization(session.user, "LISTENER");
+        }
+      } catch (error) {
+        console.error("AUTH LISTENER ERROR", error);
+      } finally {
+        setMounted(true);
       }
     }
+  );
 
-    setMounted(true);
-  }
-);
-
-return () => {
-  listener.subscription.unsubscribe();
-};
+  return () => {
+    listener.subscription.unsubscribe();
+  };
 }, []);
 async function loadChecklist() {
   if (!user || !organization) return;
