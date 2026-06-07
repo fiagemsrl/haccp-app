@@ -305,7 +305,7 @@ export default function HaccpRestaurantApp() {
   const [phone, setPhone] = useState("");
   const [authMode, setAuthMode] = useState<"login" | "register" | "forgot" | "reset">("login");
   const [state, setState] = useState(() => clone(defaultState));
-  const [mounted, setMounted] = useState(true);
+  const [mounted, setMounted] = useState(false);
   const [page, setPage] = useState("dashboard");
   const [query, setQuery] = useState("");
   const [selectedYear, setSelectedYear] = useState("all");
@@ -1486,10 +1486,7 @@ function exportBackup() {
   ["team", "team", "Team"],
   ["settings", "settings", "Impostazioni"],
 ];
-console.log("USER", user);
-console.log("ORGANIZATION", organization);
-console.log("ORGANIZATION DATA", organizationData);
-console.log("STATE RESTAURANT", state.restaurant);
+
 if (!mounted) {
   return <div className="p-8">Caricamento...</div>;
 }
