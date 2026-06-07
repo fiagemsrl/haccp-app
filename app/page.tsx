@@ -772,15 +772,14 @@ async function logout() {
 
   localStorage.removeItem("organization_id");
   sessionStorage.clear();
-  location.reload();
 
   setUser(null);
   setOrganization(null);
-
+  setOrganizationData(null);
   setState(clone(defaultState));
 
   window.location.href = "/";
-}  const openTasks = state.tasks.filter((task: any) => !task.done).length;
+} const openTasks = state.tasks.filter((task: any) => !task.done).length;
 
 const alerts =
   state.temperatures.filter((temperature: any) => temperature.status === "alert").length +
