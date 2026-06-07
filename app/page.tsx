@@ -72,6 +72,10 @@ const defaultState = {
     { id: 2, name: "Macelleria Centro", category: "Carne", phone: "0123456788", approved: true },
   ],
   reports: [],
+
+cleaning: [],
+
+allergens: [],
 };
 
 function clone(value: any) {
@@ -352,17 +356,9 @@ export default function HaccpRestaurantApp() {
   const [newTask, setNewTask] = useState({ title: "", area: "Cucina", frequency: "Giornaliera", critical: false });
   const [newDocument, setNewDocument] = useState({ name: "", type: "PDF", category: "Manuale", expiry: "" });
   const [documentFile, setDocumentFile] = useState<File | null>(null);
-  const [newFoodLabel, setNewFoodLabel] = useState({
-  productName: "",
-  supplier: "",
-  lot: "",
-  expiry: "",
-  openedAt: "",
-  ingredients: "",
-  allergens: "",
-  notes: "",
-});
-
+  const [newFoodLabel, setNewFoodLabel] = useState({productName: "",supplier: "",lot: "",expiry: "",openedAt: "",ingredients: "",allergens: "",notes: "",});
+  const [newCleaning, setNewCleaning] = useState({area: "",product: "",operator: state.currentUser,});
+  const [newAllergen, setNewAllergen] = useState({product: "",allergens: "",});
   const [foodLabelPhoto, setFoodLabelPhoto] = useState<File | null>(null);
   const [foodLabels, setFoodLabels] = useState<any[]>([]);
   const [newStaff, setNewStaff] = useState({ name: "", role: "", trainingExpiry: "" });
@@ -1229,8 +1225,50 @@ function addStaff() {
     patch((prev: any) => ({ ...prev, suppliers: [{ id: Date.now(), ...newSupplier }, ...prev.suppliers] }));
     setNewSupplier({ name: "", category: "", phone: "", approved: true });
   }
+function addCleaning() {
+  if (!newCleaning.area.trim()) return;
 
-  function removeFrom(collection: string, id: number) {
+  patch((prev: any) => ({
+    ...prev,
+    cleaning: [
+      {
+        id: Date.now(),
+        area: newCleaning.area,
+        product: newCleaning.product,
+        operator: newCleaning.operator,
+        date: today,
+      },
+      ...(prev.cleaning || []),
+    ],
+  }));
+
+  setNewCleaning({
+    area: "",
+    product: "",
+    operator: state.currentUser,
+  });
+}
+  function addAllergen() {
+  if (!newAllergen.product.trim()) return;
+
+  patch((prev: any) => ({
+    ...prev,
+    allergens: [
+      {
+        id: Date.now(),
+        product: newAllergen.product,
+        allergens: newAllergen.allergens,
+      },
+      ...(prev.allergens || []),
+    ],
+  }));
+
+  setNewAllergen({
+    product: "",
+    allergens: "",
+  });
+}
+function removeFrom(collection: string, id: number) {
     patch((prev: any) => ({ ...prev, [collection]: prev[collection].filter((item: any) => item.id !== id) }));
   }
 
@@ -1418,9 +1456,21 @@ function exportBackup() {
     if (confirm("Vuoi davvero ripristinare i dati demo?")) setState(clone(defaultState));
   }
 
-  const pages = [
-    ["dashboard", "dashboard", "Dashboard"], ["checklist", "clipboard", "Checklist"], ["temperature", "temp", "Temperature"], ["magazzino", "package", "Magazzino"],["etichette", "document", "Etichette"], ["documenti", "document", "Documenti"], ["nonconformita", "alert", "Non conformità"], ["fornitori", "supplier", "Fornitori"], ["report", "report", "Report"], ["team", "team", "Team"], ["settings", "settings", "Impostazioni"],
-  ];
+ const pages = [
+  ["dashboard", "dashboard", "Dashboard"],
+  ["checklist", "clipboard", "Checklist"],
+  ["temperature", "temp", "Temperature"],
+  ["cleaning", "clipboard", "Pulizie"],
+  ["magazzino", "package", "Magazzino"],
+  ["etichette", "document", "Etichette"],
+  ["allergeni", "alert", "Allergeni"],
+  ["documenti", "document", "Documenti"],
+  ["nonconformita", "alert", "Non conformità"],
+  ["fornitori", "supplier", "Fornitori"],
+  ["report", "report", "Report"],
+  ["team", "team", "Team"],
+  ["settings", "settings", "Impostazioni"],
+];
 
 if (!mounted) {
   return <div className="p-8">Caricamento...</div>;
@@ -1826,6 +1876,73 @@ if (!user) {
 
     {YearFilter}
 <Card className="mb-5"><div className="grid gap-3 p-5 md:grid-cols-[1fr_1fr_1fr_auto]"><TextInput placeholder="Area, es. Frigo pesce" value={newTemp.area} onChange={(e) => setNewTemp({ ...newTemp, area: e.target.value })} /><TextInput placeholder="Temperatura °C" value={newTemp.value} onChange={(e) => setNewTemp({ ...newTemp, value: e.target.value })} /><TextInput placeholder="Operatore" value={newTemp.operator} onChange={(e) => setNewTemp({ ...newTemp, operator: e.target.value })} /><Button onClick={addTemperature}>Aggiungi</Button></div></Card><div className="space-y-3">{filteredTemperatures.map((t: any) => <Card key={t.id}><div className="flex flex-col gap-3 p-5 md:flex-row md:items-center md:justify-between"><div><p className="font-bold">{t.area}</p><p className="text-sm text-slate-500">{t.date} · {t.time} · {t.operator} · Range {t.min}/{t.max}°C</p></div><div className="flex items-center gap-3"><span className="text-2xl font-bold">{t.value}°C</span><Badge tone={t.status === "ok" ? "ok" : "danger"}>{t.status === "ok" ? "OK" : "Fuori range"}</Badge><Button variant="secondary" onClick={() => removeFrom("temperatures", t.id)}><Icon name="trash" /></Button></div></div></Card>)}</div></>)}
+
+          {page === "cleaning" && (
+  <>
+    <SectionTitle
+      title="Registro pulizie"
+      subtitle="Registra pulizie ordinarie, sanificazioni, prodotti utilizzati e operatore."
+    />
+
+    <Card className="mb-5">
+      <div className="grid gap-3 p-5 md:grid-cols-[1fr_1fr_1fr_auto]">
+        <TextInput
+          placeholder="Area, es. Cucina"
+          value={newCleaning.area}
+          onChange={(e) =>
+            setNewCleaning({ ...newCleaning, area: e.target.value })
+          }
+        />
+
+        <TextInput
+          placeholder="Prodotto usato, es. Saniclor"
+          value={newCleaning.product}
+          onChange={(e) =>
+            setNewCleaning({ ...newCleaning, product: e.target.value })
+          }
+        />
+
+        <TextInput
+          placeholder="Operatore"
+          value={newCleaning.operator}
+          onChange={(e) =>
+            setNewCleaning({ ...newCleaning, operator: e.target.value })
+          }
+        />
+
+        <Button onClick={addCleaning}>Aggiungi</Button>
+      </div>
+    </Card>
+
+    <div className="space-y-3">
+      {(state.cleaning || []).map((c: any) => (
+        <Card key={c.id}>
+          <div className="flex flex-col gap-3 p-5 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="font-bold">{c.area}</p>
+              <p className="text-sm text-slate-500">
+                {c.date} · {c.operator}
+              </p>
+              <p className="mt-2 text-sm">
+                Prodotto utilizzato: <b>{c.product || "-"}</b>
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Badge tone="ok">Registrata</Badge>
+              <Button
+                variant="secondary"
+                onClick={() => removeFrom("cleaning", c.id)}
+              >
+                <Icon name="trash" />
+              </Button>
+            </div>
+          </div>
+        </Card>
+      ))}
+    </div>
+  </>
+)}
 
           {page === "magazzino" && <><SectionTitle title="Magazzino e scadenze" subtitle="Gestione lotti, FIFO, prodotti aperti e scadenze." /><Card className="mb-5"><div className="grid gap-3 p-5 md:grid-cols-[1fr_1fr_1fr_1fr_1fr_auto]"><TextInput placeholder="Prodotto" value={newProduct.name} onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })} /><TextInput placeholder="Lotto" value={newProduct.lot} onChange={(e) => setNewProduct({ ...newProduct, lot: e.target.value })} /><TextInput type="date" value={newProduct.expiry} onChange={(e) => setNewProduct({ ...newProduct, expiry: e.target.value })} /><TextInput placeholder="Posizione" value={newProduct.location} onChange={(e) => setNewProduct({ ...newProduct, location: e.target.value })} /><TextInput placeholder="Quantità" value={newProduct.quantity} onChange={(e) => setNewProduct({ ...newProduct, quantity: e.target.value })} /><Button onClick={addProduct}>Aggiungi</Button></div></Card><div className="mb-5 flex items-center gap-3 rounded-3xl bg-white p-4 shadow-sm"><Icon name="search" /><input className="w-full outline-none" placeholder="Cerca prodotto, lotto o posizione" value={query} onChange={(e) => setQuery(e.target.value)} /></div><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{filteredProducts.map((p: any) => <Card key={p.id}><div className="p-5"><div className="flex items-start justify-between"><div><p className="font-bold">{p.name}</p><p className="text-sm text-slate-500">Lotto {p.lot}</p></div><Badge tone={p.status === "ok" ? "ok" : p.status === "critico" ? "danger" : "warn"}>{p.status === "ok" ? "OK" : p.status === "critico" ? "Critico" : "In scadenza"}</Badge></div><p className="mt-4 text-sm">Scadenza: <b>{p.expiry}</b></p><p className="text-sm text-slate-500">Posizione: {p.location} · Quantità: {p.quantity || "-"}</p><div className="mt-4"><Button variant="secondary" onClick={() => removeFrom("products", p.id)}><Icon name="trash" className="mr-2" />Elimina</Button></div></div></Card>)}</div></>}
 
