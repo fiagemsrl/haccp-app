@@ -367,33 +367,42 @@ useEffect(() => {
   async function loadAuthAndOrganization(currentUser: any, source: string) {
   if (!currentUser) return;
 
-  let orgData = await getCurrentOrganizationId(currentUser.id);
-
-  if (!orgData?.organization_id) {
-    orgData = await acceptPendingInvitation(currentUser);
-  }
-
-  console.log("ORGDATA " + source, orgData);
-
-  if (!orgData?.organization_id) {
-    setOrganization(null);
-    setOrganizationData(null);
-    setSubscription({ status: "active", plan: "free" });
-    return;
-  }
-
-  setOrganization(orgData);
-
-  const details = await getOrganizationDetails(orgData.organization_id);
-  console.log("DETAILS " + source, details);
-
-  setOrganizationData(details);
-
   try {
-    const sub = await getSubscriptionStatus(orgData.organization_id);
-    setSubscription(sub || { status: "active", plan: "free" });
+    let orgData = await getCurrentOrganizationId(currentUser.id);
+
+    if (!orgData?.organization_id) {
+      orgData = await acceptPendingInvitation(currentUser);
+    }
+
+    console.log("ORGDATA " + source, orgData);
+
+    if (!orgData?.organization_id) {
+      setOrganization(null);
+      setOrganizationData(null);
+      setSubscription({ status: "active", plan: "free" });
+      return;
+    }
+
+    setOrganization(orgData);
+
+    try {
+      const details = await getOrganizationDetails(orgData.organization_id);
+      console.log("DETAILS " + source, details);
+      setOrganizationData(details);
+    } catch (error) {
+      console.error("DETAILS ERROR " + source, error);
+      setOrganizationData(null);
+    }
+
+    try {
+      const sub = await getSubscriptionStatus(orgData.organization_id);
+      setSubscription(sub || { status: "active", plan: "free" });
+    } catch (error) {
+      console.error("SUBSCRIPTION ERROR " + source, error);
+      setSubscription({ status: "active", plan: "free" });
+    }
   } catch (error) {
-    console.error("SUBSCRIPTION ERROR " + source, error);
+    console.error("LOAD AUTH ORG ERROR " + source, error);
     setSubscription({ status: "active", plan: "free" });
   }
 }
