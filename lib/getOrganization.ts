@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 
 export async function getCurrentOrganizationId(userId: string) {
+  console.log("GET ORG START", userId);
   const { data, error } = await supabase
     .from("restaurant_users")
     .select("organization_id, role")
