@@ -378,85 +378,68 @@ const hash = window.location.hash;
     setAuthMode("reset");
   }
   supabase.auth.getUser().then(async ({ data }) => {
-    setUser(data.user);
+  setUser(data.user);
 
-    if (data.user) {
+  if (data.user) {
+    let orgData = await getCurrentOrganizationId(data.user.id);
+
+    if (!orgData?.organization_id) {
+      orgData = await acceptPendingInvitation(data.user);
+    }
+
+    console.log("ORGDATA GETUSER", orgData);
+
+    setOrganization(orgData);
+
+    if (orgData?.organization_id) {
+      const details = await getOrganizationDetails(orgData.organization_id);
+      console.log("DETAILS GETUSER", details);
+
+      setOrganizationData(details);
+
+      const sub = await getSubscriptionStatus(orgData.organization_id);
+      setSubscription(sub);
+    }
+  }
+});
+
+const { data: listener } = supabase.auth.onAuthStateChange(
+  async (_event, session) => {
+    console.log("AUTH EVENT:", _event);
+
+    if (_event === "PASSWORD_RECOVERY") {
+      setAuthMode("reset");
+    }
+
+    setUser(session?.user ?? null);
+
+    if (session?.user) {
       let orgData = await getCurrentOrganizationId(session.user.id);
 
-const savedOrganizationId = localStorage.getItem("organization_id");
+      if (!orgData?.organization_id) {
+        orgData = await acceptPendingInvitation(session.user);
+      }
 
-if (savedOrganizationId) {
-  orgData = {
-    organization_id: savedOrganizationId,
-    role: "owner",
-  };
-} else {
-  orgData = await getCurrentOrganizationId(data.user.id);
-}
+      console.log("ORGDATA LISTENER", orgData);
 
-if (!orgData?.organization_id) {
-  orgData = await acceptPendingInvitation(data.user);
-}
       setOrganization(orgData);
 
       if (orgData?.organization_id) {
-        localStorage.setItem("organization_id", orgData.organization_id);
-
         const details = await getOrganizationDetails(orgData.organization_id);
+        console.log("DETAILS LISTENER", details);
+
         setOrganizationData(details);
 
         const sub = await getSubscriptionStatus(orgData.organization_id);
         setSubscription(sub);
       }
     }
-  });
-
-  const { data: listener } = supabase.auth.onAuthStateChange(
-    async (_event, session) => {
-console.log("AUTH EVENT:", _event);
-  if (_event === "PASSWORD_RECOVERY") {
-    setAuthMode("reset");
   }
-      setUser(session?.user ?? null);
+);
 
-
-      if (session?.user) {
-
-  let orgData = await getCurrentOrganizationId(data.user.id);
-
-  const savedOrganizationId = localStorage.getItem("organization_id");
-
-  if (savedOrganizationId) {
-    orgData = {
-      organization_id: savedOrganizationId,
-      role: "owner",
-    };
-  } else {
-    orgData = await getCurrentOrganizationId(session.user.id);
-  }
-
-  if (!orgData?.organization_id) {
-    orgData = await acceptPendingInvitation(session.user);
-  }
-
-  setOrganization(orgData);
-
-  if (orgData?.organization_id) {
-    localStorage.setItem("organization_id", orgData.organization_id);
-
-    const details = await getOrganizationDetails(orgData.organization_id);
-    setOrganizationData(details);
-
-    const sub = await getSubscriptionStatus(orgData.organization_id);
-    setSubscription(sub);
-  }
-}
-    }
-  );
-
-  return () => {
-    listener.subscription.unsubscribe();
-  };
+return () => {
+  listener.subscription.unsubscribe();
+};
 }, []);
 useEffect(() => {
   setMounted(true);
