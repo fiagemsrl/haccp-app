@@ -668,6 +668,7 @@ useEffect(() => {
     loadChecklist();
     loadDocuments();
     loadNonConformities();
+    loadCleaning();
     loadInvitations();
   }
 }, [user, organization]);
@@ -1225,30 +1226,57 @@ function addStaff() {
     patch((prev: any) => ({ ...prev, suppliers: [{ id: Date.now(), ...newSupplier }, ...prev.suppliers] }));
     setNewSupplier({ name: "", category: "", phone: "", approved: true });
   }
-function addCleaning() {
-  if (!newCleaning.area.trim()) return;
+async function loadCleaning() {
+  if (!user || !organization) return;
+
+  const { data, error } = await supabase
+    .from("cleaning_logs")
+    .select("*")
+    .eq("organization_id", organization.organization_id)
+    .order("created_at", { ascending: false })
+    .range(0, 5000);
+
+  if (error) {
+    alert("Errore caricamento pulizie: " + error.message);
+    return;
+  }
 
   patch((prev: any) => ({
     ...prev,
-    cleaning: [
-      {
-        id: Date.now(),
-        area: newCleaning.area,
-        product: newCleaning.product,
-        operator: newCleaning.operator,
-        date: today,
-      },
-      ...(prev.cleaning || []),
-    ],
+    cleaning: (data || []).map((c: any) => ({
+      id: c.id,
+      area: c.area,
+      product: c.product,
+      operator: c.operator,
+      date: new Date(c.created_at).toISOString().slice(0, 10),
+    })),
   }));
+}
+async function addCleaning() {
+  if (!newCleaning.area.trim()) return;
+  if (!organization) return;
+
+  const { error } = await supabase.from("cleaning_logs").insert({
+    organization_id: organization.organization_id,
+    user_id: user?.id,
+    area: newCleaning.area,
+    product: newCleaning.product,
+    operator: newCleaning.operator,
+  });
+
+  if (error) {
+    alert("Errore salvataggio pulizia: " + error.message);
+    return;
+  }
+
+  await loadCleaning();
 
   setNewCleaning({
     area: "",
     product: "",
     operator: state.currentUser,
   });
-}
-  function addAllergen() {
+}  function addAllergen() {
   if (!newAllergen.product.trim()) return;
 
   patch((prev: any) => ({
