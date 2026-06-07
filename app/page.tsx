@@ -305,7 +305,7 @@ export default function HaccpRestaurantApp() {
   const [phone, setPhone] = useState("");
   const [authMode, setAuthMode] = useState<"login" | "register" | "forgot" | "reset">("login");
   const [state, setState] = useState(() => clone(defaultState));
-  const [mounted, setMounted] = useState(true);
+  const [mounted, setMounted] = useState(false);
   const [page, setPage] = useState("dashboard");
   const [query, setQuery] = useState("");
   const [selectedYear, setSelectedYear] = useState("all");
@@ -365,34 +365,38 @@ useEffect(() => {
   }
 
   async function loadAuthAndOrganization(currentUser: any, source: string) {
-    if (!currentUser) return;
+  if (!currentUser) return;
 
-    const orgData = await getCurrentOrganizationId(currentUser.id);
+  let orgData = await getCurrentOrganizationId(currentUser.id);
 
-    console.log("ORGDATA " + source, orgData);
-
-    if (!orgData?.organization_id) {
-      setOrganization(null);
-      setOrganizationData(null);
-      setSubscription({ status: "active", plan: "free" });
-      return;
-    }
-
-    setOrganization(orgData);
-
-    const details = await getOrganizationDetails(orgData.organization_id);
-    console.log("DETAILS " + source, details);
-
-    setOrganizationData(details);
-
-    try {
-      const sub = await getSubscriptionStatus(orgData.organization_id);
-      setSubscription(sub || { status: "active", plan: "free" });
-    } catch (error) {
-      console.error("SUBSCRIPTION ERROR " + source, error);
-      setSubscription({ status: "active", plan: "free" });
-    }
+  if (!orgData?.organization_id) {
+    orgData = await acceptPendingInvitation(currentUser);
   }
+
+  console.log("ORGDATA " + source, orgData);
+
+  if (!orgData?.organization_id) {
+    setOrganization(null);
+    setOrganizationData(null);
+    setSubscription({ status: "active", plan: "free" });
+    return;
+  }
+
+  setOrganization(orgData);
+
+  const details = await getOrganizationDetails(orgData.organization_id);
+  console.log("DETAILS " + source, details);
+
+  setOrganizationData(details);
+
+  try {
+    const sub = await getSubscriptionStatus(orgData.organization_id);
+    setSubscription(sub || { status: "active", plan: "free" });
+  } catch (error) {
+    console.error("SUBSCRIPTION ERROR " + source, error);
+    setSubscription({ status: "active", plan: "free" });
+  }
+}
 
   supabase.auth.getUser().then(async ({ data }) => {
     try {
@@ -601,9 +605,7 @@ async function loadNonConformities() {
   }));
 }
 async function loadInvitations() {
-  const organizationId =
-    organization?.organization_id ||
-    localStorage.getItem("organization_id");
+  const organizationId = organization?.organization_id;
 
   if (!organizationId) return;
 
@@ -1088,9 +1090,7 @@ patch((prev: any) => ({
 }
 
  async function inviteCollaborator() {
-  const organizationId =
-    organization?.organization_id ||
-    localStorage.getItem("organization_id");
+  const organizationId = organization?.organization_id;
 
   if (!inviteEmail.trim() || !organizationId) {
     alert("Email o organizzazione mancante");
@@ -1156,9 +1156,7 @@ alert(
  });
 } 
 async function resendInvitation(invite: any) {
-  const organizationId =
-    organization?.organization_id ||
-    localStorage.getItem("organization_id");
+  const organizationId = organization?.organization_id;
 
   if (!organizationId) {
     alert("Organizzazione mancante");
