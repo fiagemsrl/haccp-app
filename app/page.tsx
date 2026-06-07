@@ -407,51 +407,59 @@ useEffect(() => {
   }
 }
 
-  supabase.auth.getUser().then(async ({ data }) => {
-    try {
-      setUser(data.user);
+  useEffect(() => {
+  let active = true;
 
-      if (data.user) {
-        await loadAuthAndOrganization(data.user, "GETUSER");
-      }
-    } catch (error) {
-      console.error("AUTH GETUSER ERROR", error);
-    } finally {
-      setMounted(true);
+  async function init() {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!active) return;
+
+    const currentUser = session?.user ?? null;
+
+    setUser(currentUser);
+
+    if (currentUser) {
+      await loadAuthAndOrganization(currentUser, "INIT");
     }
-  });
 
-  const { data: listener } = supabase.auth.onAuthStateChange(
-  async (_event, session) => {
-    try {
-      console.log("AUTH EVENT:", _event);
-
-      if (_event === "PASSWORD_RECOVERY") {
-        setAuthMode("reset");
-      }
-
-      setUser(session?.user ?? null);
-
-      if (session?.user) {
-        console.log("PRIMA LOAD AUTH LISTENER", session.user.id);
-
-        await loadAuthAndOrganization(session.user, "LISTENER");
-
-        console.log("DOPO LOAD AUTH LISTENER");
-      }
-    } catch (error) {
-      console.error("AUTH LISTENER ERROR", error);
-    } finally {
-      setMounted(true);
-    }
+    setMounted(true);
   }
-);
+
+  init();
+
+  const {
+    data: { subscription },
+  } = supabase.auth.onAuthStateChange(
+    async (event, session) => {
+      if (!active) return;
+
+      if (event === "SIGNED_OUT") {
+        setUser(null);
+        setOrganization(null);
+        setOrganizationData(null);
+        return;
+      }
+
+      const currentUser = session?.user ?? null;
+
+      setUser(currentUser);
+
+      if (currentUser) {
+        await loadAuthAndOrganization(currentUser, event);
+      }
+    }
+  );
 
   return () => {
-    listener.subscription.unsubscribe();
+    active = false;
+    subscription.unsubscribe();
   };
 }, []);
-async function loadChecklist() {
+
+ async function loadChecklist() {
   if (!user || !organization) return;
 
   const years = ["2024", "2025", "2026"];
