@@ -29,55 +29,27 @@ const today = new Date().toISOString().slice(0, 10);
 
 const defaultState = {
   restaurant: {
-    id: "demo-restaurant",
-    name: "Ristorante Demo",
-    address: "Via Roma 1",
-    haccpManager: "Mario Rossi",
+    id: "",
+    name: "",
+    address: "",
+    haccpManager: "",
     fridgeLimit: 4,
     freezerLimit: -18,
   },
-  currentUser: "Mario Rossi",
-  tasks: [
-    { id: 1, title: "Controllo temperature frigo/freezer", area: "Cucina", frequency: "Giornaliera", done: false, critical: true, date: today, operator: "" },
-    { id: 2, title: "Sanificazione piani di lavoro", area: "Cucina", frequency: "Giornaliera", done: true, critical: true, date: today, operator: "Lucia Bianchi" },
-    { id: 3, title: "Controllo scadenze prodotti aperti", area: "Magazzino", frequency: "Giornaliera", done: false, critical: false, date: today, operator: "" },
-    { id: 4, title: "Verifica merci in entrata", area: "Ricevimento", frequency: "Quando necessario", done: false, critical: true, date: today, operator: "" },
-    { id: 5, title: "Pulizia cappa e filtri", area: "Cucina", frequency: "Settimanale", done: false, critical: false, date: today, operator: "" },
-  ],
-  temperatures: [
-    { id: 1, area: "Frigo carne", value: 3.4, min: 0, max: 4, date: today, time: "08:20", operator: "Mario Rossi", status: "ok" },
-    { id: 2, area: "Freezer", value: -18.2, min: -25, max: -18, date: today, time: "08:21", operator: "Lucia Bianchi", status: "ok" },
-    { id: 3, area: "Frigo verdure", value: 7.1, min: 0, max: 6, date: today, time: "08:25", operator: "Mario Rossi", status: "alert" },
-  ],
-  products: [
-    { id: 1, name: "Mozzarella", lot: "MOZ-2401", expiry: "2026-05-28", location: "Frigo 1", quantity: "8 kg", opened: true, status: "in_scadenza" },
-    { id: 2, name: "Petto di pollo", lot: "POL-774", expiry: "2026-05-27", location: "Frigo carne", quantity: "5 kg", opened: false, status: "critico" },
-    { id: 3, name: "Pasta secca", lot: "PAS-115", expiry: "2027-01-12", location: "Dispensa", quantity: "20 kg", opened: false, status: "ok" },
-  ],
-  documents: [
-    { id: 1, name: "Manuale HACCP", type: "PDF", category: "Manuale", expiry: "2027-01-01", uploadedAt: today },
-    { id: 2, name: "Attestato formazione Mario", type: "PDF", category: "Formazione", expiry: "2026-09-15", uploadedAt: today },
-    { id: 3, name: "Contratto derattizzazione", type: "PDF", category: "Infestanti", expiry: "2026-06-30", uploadedAt: today },
-  ],
-  nonConformities: [
-    { id: 1, title: "Frigo verdure sopra soglia", severity: "Media", action: "Spostati alimenti e richiesta manutenzione", status: "Aperta", date: today, operator: "Mario Rossi" },
-  ],
-  staff: [
-    { id: 1, name: "Mario Rossi", role: "Responsabile HACCP", trainingExpiry: "2026-09-15", active: true },
-    { id: 2, name: "Lucia Bianchi", role: "Cuoco", trainingExpiry: "2026-11-10", active: true },
-    { id: 3, name: "Andrea Verdi", role: "Addetto sala", trainingExpiry: "2026-06-15", active: true },
-  ],
-  suppliers: [
-    { id: 1, name: "Caseificio Locale", category: "Latticini", phone: "0123456789", approved: true },
-    { id: 2, name: "Macelleria Centro", category: "Carne", phone: "0123456788", approved: true },
-  ],
+
+  currentUser: "",
+
+  tasks: [],
+  temperatures: [],
+  products: [],
+  documents: [],
+  nonConformities: [],
+  staff: [],
+  suppliers: [],
   reports: [],
-
-cleaning: [],
-
-allergens: [],
+  cleaning: [],
+  allergens: [],
 };
-
 function clone(value: any) {
   return JSON.parse(JSON.stringify(value));
 }
@@ -464,19 +436,8 @@ setOrganization(orgData);
   };
 }, []);
 useEffect(() => {
-  if (user) {
-    const saved = loadState();
-    setState(saved);
-  }
-
   setMounted(true);
-}, [user]);
-
-useEffect(() => {
-  if (mounted) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }
-}, [state, mounted]);
+}, []);
 
 async function loadChecklist() {
   if (!user || !organization) return;
