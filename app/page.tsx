@@ -397,11 +397,27 @@ const hash = window.location.hash;
 
       setOrganizationData(details);
 
-      const sub = await getSubscriptionStatus(orgData.organization_id);
-      setSubscription(sub);
+      try {
+        const sub = await getSubscriptionStatus(orgData.organization_id);
+
+        setSubscription(
+          sub || {
+            status: "active",
+            plan: "free",
+          }
+        );
+      } catch (error) {
+        console.error("SUBSCRIPTION ERROR GETUSER", error);
+
+        setSubscription({
+          status: "active",
+          plan: "free",
+        });
+      }
     }
   }
-setMounted(true);
+
+  setMounted(true);
 });
 
 const { data: listener } = supabase.auth.onAuthStateChange(
@@ -431,8 +447,23 @@ const { data: listener } = supabase.auth.onAuthStateChange(
 
         setOrganizationData(details);
 
-        const sub = await getSubscriptionStatus(orgData.organization_id);
-        setSubscription(sub);
+        try {
+          const sub = await getSubscriptionStatus(orgData.organization_id);
+
+          setSubscription(
+            sub || {
+              status: "active",
+              plan: "free",
+            }
+          );
+        } catch (error) {
+          console.error("SUBSCRIPTION ERROR LISTENER", error);
+
+          setSubscription({
+            status: "active",
+            plan: "free",
+          });
+        }
       }
     }
 
