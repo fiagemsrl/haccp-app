@@ -1474,7 +1474,10 @@ function exportBackup() {
   ["team", "team", "Team"],
   ["settings", "settings", "Impostazioni"],
 ];
-
+console.log("USER", user);
+console.log("ORGANIZATION", organization);
+console.log("ORGANIZATION DATA", organizationData);
+console.log("STATE RESTAURANT", state.restaurant);
 if (!mounted) {
   return <div className="p-8">Caricamento...</div>;
 }
