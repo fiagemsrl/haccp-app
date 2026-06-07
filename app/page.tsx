@@ -23,7 +23,6 @@ import {
   CartesianGrid,
 } from "recharts";
 
-const STORAGE_KEY = "haccp_easy_restaurant_app_v1";
 const today = new Date().toISOString().slice(0, 10);
 
 
@@ -52,16 +51,6 @@ const defaultState = {
 };
 function clone(value: any) {
   return JSON.parse(JSON.stringify(value));
-}
-
-function loadState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return clone(defaultState);
-    return { ...clone(defaultState), ...JSON.parse(raw) };
-  } catch {
-    return clone(defaultState);
-  }
 }
 
 function getTime() {
