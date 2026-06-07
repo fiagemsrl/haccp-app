@@ -356,13 +356,6 @@ async function acceptPendingInvitation(currentUser: any) {
     role: invitation.role,
   };
 }
-useEffect(() => {
-  const hash = window.location.hash;
-  const search = window.location.search;
-
-  if (hash.includes("type=recovery") || search.includes("type=recovery")) {
-    setAuthMode("reset");
-  }
 
   async function loadAuthAndOrganization(currentUser: any, source: string) {
   if (!currentUser) return;
