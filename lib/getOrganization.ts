@@ -1,3 +1,4 @@
+import { supabase } from "@/lib/supabase";
 export async function getCurrentOrganizationId(userId: string) {
   console.log("GET ORG START", userId);
 
