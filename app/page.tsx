@@ -381,7 +381,7 @@ const hash = window.location.hash;
     setUser(data.user);
 
     if (data.user) {
-      let orgData = null;
+      let orgData = await getCurrentOrganizationId(session.user.id);
 
 const savedOrganizationId = localStorage.getItem("organization_id");
 
@@ -422,7 +422,7 @@ console.log("AUTH EVENT:", _event);
 
       if (session?.user) {
 
-  let orgData = null;
+  let orgData = await getCurrentOrganizationId(data.user.id);
 
   const savedOrganizationId = localStorage.getItem("organization_id");
 
@@ -770,7 +770,7 @@ async function logout() {
     scope: "global",
   });
 
-  localStorage.clear();
+  localStorage.removeItem("organization_id");
   sessionStorage.clear();
   location.reload();
 
