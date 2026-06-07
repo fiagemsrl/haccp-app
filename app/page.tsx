@@ -414,9 +414,11 @@ async function acceptPendingInvitation(currentUser: any) {
 
     setUser(currentUser);
 
-    if (currentUser) {
-      await loadAuthAndOrganization(currentUser, "INIT");
-    }
+   if (currentUser) {
+  setTimeout(() => {
+    loadAuthAndOrganization(currentUser, "INIT");
+  }, 0);
+}
 
     setMounted(true);
   }
@@ -441,8 +443,10 @@ async function acceptPendingInvitation(currentUser: any) {
       setUser(currentUser);
 
       if (currentUser) {
-        await loadAuthAndOrganization(currentUser, event);
-      }
+  setTimeout(() => {
+    loadAuthAndOrganization(currentUser, event);
+  }, 0);
+}
     }
   );
 
