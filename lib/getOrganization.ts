@@ -1,33 +1,34 @@
-import { supabase } from "@/lib/supabase";
-
 export async function getCurrentOrganizationId(userId: string) {
   console.log("GET ORG START", userId);
-  const { data, error } = await supabase
-    .from("restaurant_users")
-    .select("organization_id, role")
-    .eq("user_id", userId)
-    .limit(1)
-    .maybeSingle();
 
-  if (error) {
-    console.error("Organization error:", error);
+  try {
+    const result = await Promise.race([
+      supabase
+        .from("restaurant_users")
+        .select("organization_id, role")
+        .eq("user_id", userId)
+        .single(),
+
+      new Promise((_, reject) =>
+        setTimeout(
+          () => reject(new Error("GET ORG TIMEOUT")),
+          10000
+        )
+      ),
+    ]);
+
+    console.log("GET ORG RESULT", result);
+
+    const { data, error }: any = result;
+
+    if (error) {
+      console.error("GET ORG ERROR", error);
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error("GET ORG CATCH", error);
     return null;
   }
-
-  return data;
-}
-
-export async function getOrganizationDetails(organizationId: string) {
-  const { data, error } = await supabase
-    .from("organizations")
-    .select("*")
-    .eq("id", organizationId)
-    .maybeSingle();
-
-  if (error) {
-    console.error("Organization details error:", error);
-    return null;
-  }
-
-  return data;
 }
