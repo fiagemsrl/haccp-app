@@ -5,7 +5,8 @@ export async function getCurrentOrganizationId(userId: string) {
     .from("restaurant_users")
     .select("organization_id, role")
     .eq("user_id", userId)
-    .single();
+    .limit(1)
+    .maybeSingle();
 
   if (error) {
     console.error("Organization error:", error);
@@ -15,14 +16,12 @@ export async function getCurrentOrganizationId(userId: string) {
   return data;
 }
 
-export async function getOrganizationDetails(
-  organizationId: string
-) {
+export async function getOrganizationDetails(organizationId: string) {
   const { data, error } = await supabase
     .from("organizations")
     .select("*")
     .eq("id", organizationId)
-    .single();
+    .maybeSingle();
 
   if (error) {
     console.error("Organization details error:", error);
