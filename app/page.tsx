@@ -381,7 +381,18 @@ const hash = window.location.hash;
     setUser(data.user);
 
     if (data.user) {
-      let orgData = await getCurrentOrganizationId(data.user.id);
+      let orgData = null;
+
+const savedOrganizationId = localStorage.getItem("organization_id");
+
+if (savedOrganizationId) {
+  orgData = {
+    organization_id: savedOrganizationId,
+    role: "owner",
+  };
+} else {
+  orgData = await getCurrentOrganizationId(data.user.id);
+}
 
 if (!orgData?.organization_id) {
   orgData = await acceptPendingInvitation(data.user);
@@ -410,24 +421,36 @@ console.log("AUTH EVENT:", _event);
 
 
       if (session?.user) {
-        let orgData = await getCurrentOrganizationId(session.user.id);
 
-if (!orgData?.organization_id) {
-  orgData = await acceptPendingInvitation(session.user);
+  let orgData = null;
+
+  const savedOrganizationId = localStorage.getItem("organization_id");
+
+  if (savedOrganizationId) {
+    orgData = {
+      organization_id: savedOrganizationId,
+      role: "owner",
+    };
+  } else {
+    orgData = await getCurrentOrganizationId(session.user.id);
+  }
+
+  if (!orgData?.organization_id) {
+    orgData = await acceptPendingInvitation(session.user);
+  }
+
+  setOrganization(orgData);
+
+  if (orgData?.organization_id) {
+    localStorage.setItem("organization_id", orgData.organization_id);
+
+    const details = await getOrganizationDetails(orgData.organization_id);
+    setOrganizationData(details);
+
+    const sub = await getSubscriptionStatus(orgData.organization_id);
+    setSubscription(sub);
+  }
 }
-
-setOrganization(orgData);
-        
-        if (orgData?.organization_id) {
-          localStorage.setItem("organization_id", orgData.organization_id);
-
-          const details = await getOrganizationDetails(orgData.organization_id);
-          setOrganizationData(details);
-
-          const sub = await getSubscriptionStatus(orgData.organization_id);
-          setSubscription(sub);
-        }
-      }
     }
   );
 
