@@ -623,6 +623,26 @@ console.log("INVITATIONS:", data);
 
 setInvitations(data || []);
 }
+
+
+useEffect(() => {
+  if (!organizationData) return;
+
+  patch((prev: any) => ({
+    ...prev,
+    restaurant: {
+      ...prev.restaurant,
+      id: organization?.organization_id || "",
+      name: organizationData.name || "",
+      address: organizationData.address || "",
+      haccpManager: organizationData.manager_name || "",
+      fridgeLimit: prev.restaurant.fridgeLimit || 4,
+      freezerLimit: prev.restaurant.freezerLimit || -18,
+    },
+    currentUser: user?.email || "",
+  }));
+}, [organizationData, organization, user]);
+
 useEffect(() => {
   if (user && organization) {
     loadTemperatures();
