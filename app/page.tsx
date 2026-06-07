@@ -409,26 +409,30 @@ useEffect(() => {
   });
 
   const { data: listener } = supabase.auth.onAuthStateChange(
-    async (_event, session) => {
-      try {
-        console.log("AUTH EVENT:", _event);
+  async (_event, session) => {
+    try {
+      console.log("AUTH EVENT:", _event);
 
-        if (_event === "PASSWORD_RECOVERY") {
-          setAuthMode("reset");
-        }
-
-        setUser(session?.user ?? null);
-
-        if (session?.user) {
-          await loadAuthAndOrganization(session.user, "LISTENER");
-        }
-      } catch (error) {
-        console.error("AUTH LISTENER ERROR", error);
-      } finally {
-        setMounted(true);
+      if (_event === "PASSWORD_RECOVERY") {
+        setAuthMode("reset");
       }
+
+      setUser(session?.user ?? null);
+
+      if (session?.user) {
+        console.log("PRIMA LOAD AUTH LISTENER", session.user.id);
+
+        await loadAuthAndOrganization(session.user, "LISTENER");
+
+        console.log("DOPO LOAD AUTH LISTENER");
+      }
+    } catch (error) {
+      console.error("AUTH LISTENER ERROR", error);
+    } finally {
+      setMounted(true);
     }
-  );
+  }
+);
 
   return () => {
     listener.subscription.unsubscribe();
