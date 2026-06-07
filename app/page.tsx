@@ -316,7 +316,7 @@ export default function HaccpRestaurantApp() {
   const [phone, setPhone] = useState("");
   const [authMode, setAuthMode] = useState<"login" | "register" | "forgot" | "reset">("login");
   const [state, setState] = useState(() => clone(defaultState));
-  const [mounted, setMounted] = useState(false);
+  const [mounted, setMounted] = useState(true);
   const [page, setPage] = useState("dashboard");
   const [query, setQuery] = useState("");
   const [selectedYear, setSelectedYear] = useState("all");
