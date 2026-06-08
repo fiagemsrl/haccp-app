@@ -13,7 +13,6 @@ export async function getCurrentOrganizationId(userId: string) {
   console.log("GET ORG ERROR", error);
 
   if (error) {
-    console.error("Organization error:", error);
     return null;
   }
 
@@ -21,12 +20,13 @@ export async function getCurrentOrganizationId(userId: string) {
 }
 
 export async function getOrganizationDetails(organizationId: string) {
+  console.log("GET DETAILS", organizationId);
+
   const { data, error } = await supabase
     .from("organizations")
     .select("*")
     .eq("id", organizationId)
     .single();
-
   if (error) {
     console.error("Organization details error:", error);
     return null;
