@@ -1024,6 +1024,19 @@ async function addTemperature() {
       location: newProduct.location,
       quantity: newProduct.quantity,
     });
+async function deleteProduct(id: string) {
+  const { error } = await supabase
+    .from("products")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    alert("Errore eliminazione prodotto: " + error.message);
+    return;
+  }
+
+  await loadProducts();
+}
 
   if (error) {
     alert("Errore salvataggio prodotto: " + error.message);
@@ -2020,7 +2033,7 @@ if (!user) {
   </>
 )}
 
-          {page === "magazzino" && <><SectionTitle title="Magazzino e scadenze" subtitle="Gestione lotti, FIFO, prodotti aperti e scadenze." /><Card className="mb-5"><div className="grid gap-3 p-5 md:grid-cols-[1fr_1fr_1fr_1fr_1fr_auto]"><TextInput placeholder="Prodotto" value={newProduct.name} onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })} /><TextInput placeholder="Lotto" value={newProduct.lot} onChange={(e) => setNewProduct({ ...newProduct, lot: e.target.value })} /><TextInput type="date" value={newProduct.expiry} onChange={(e) => setNewProduct({ ...newProduct, expiry: e.target.value })} /><TextInput placeholder="Posizione" value={newProduct.location} onChange={(e) => setNewProduct({ ...newProduct, location: e.target.value })} /><TextInput placeholder="Quantità" value={newProduct.quantity} onChange={(e) => setNewProduct({ ...newProduct, quantity: e.target.value })} /><Button onClick={addProduct}>Aggiungi</Button></div></Card><div className="mb-5 flex items-center gap-3 rounded-3xl bg-white p-4 shadow-sm"><Icon name="search" /><input className="w-full outline-none" placeholder="Cerca prodotto, lotto o posizione" value={query} onChange={(e) => setQuery(e.target.value)} /></div><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{filteredProducts.map((p: any) => <Card key={p.id}><div className="p-5"><div className="flex items-start justify-between"><div><p className="font-bold">{p.name}</p><p className="text-sm text-slate-500">Lotto {p.lot}</p></div><Badge tone={p.status === "ok" ? "ok" : p.status === "critico" ? "danger" : "warn"}>{p.status === "ok" ? "OK" : p.status === "critico" ? "Critico" : "In scadenza"}</Badge></div><p className="mt-4 text-sm">Scadenza: <b>{p.expiry}</b></p><p className="text-sm text-slate-500">Posizione: {p.location} · Quantità: {p.quantity || "-"}</p><div className="mt-4"><Button variant="secondary" onClick={() => removeFrom("products", p.id)}><Icon name="trash" className="mr-2" />Elimina</Button></div></div></Card>)}</div></>}
+          {page === "magazzino" && <><SectionTitle title="Magazzino e scadenze" subtitle="Gestione lotti, FIFO, prodotti aperti e scadenze." /><Card className="mb-5"><div className="grid gap-3 p-5 md:grid-cols-[1fr_1fr_1fr_1fr_1fr_auto]"><TextInput placeholder="Prodotto" value={newProduct.name} onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })} /><TextInput placeholder="Lotto" value={newProduct.lot} onChange={(e) => setNewProduct({ ...newProduct, lot: e.target.value })} /><TextInput type="date" value={newProduct.expiry} onChange={(e) => setNewProduct({ ...newProduct, expiry: e.target.value })} /><TextInput placeholder="Posizione" value={newProduct.location} onChange={(e) => setNewProduct({ ...newProduct, location: e.target.value })} /><TextInput placeholder="Quantità" value={newProduct.quantity} onChange={(e) => setNewProduct({ ...newProduct, quantity: e.target.value })} /><Button onClick={addProduct}>Aggiungi</Button></div></Card><div className="mb-5 flex items-center gap-3 rounded-3xl bg-white p-4 shadow-sm"><Icon name="search" /><input className="w-full outline-none" placeholder="Cerca prodotto, lotto o posizione" value={query} onChange={(e) => setQuery(e.target.value)} /></div><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{filteredProducts.map((p: any) => <Card key={p.id}><div className="p-5"><div className="flex items-start justify-between"><div><p className="font-bold">{p.name}</p><p className="text-sm text-slate-500">Lotto {p.lot}</p></div><Badge tone={p.status === "ok" ? "ok" : p.status === "critico" ? "danger" : "warn"}>{p.status === "ok" ? "OK" : p.status === "critico" ? "Critico" : "In scadenza"}</Badge></div><p className="mt-4 text-sm">Scadenza: <b>{p.expiry}</b></p><p className="text-sm text-slate-500">Posizione: {p.location} · Quantità: {p.quantity || "-"}</p><div className="mt-4"><Button variant="secondary" onClick={() => deleteProduct(p.id)}><Icon name="trash" className="mr-2" />Elimina</Button></div></div></Card>)}</div></>}
 
           {page === "documenti" && (
   <>
