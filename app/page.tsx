@@ -573,6 +573,35 @@ async function loadDocuments() {
   }
 }
 
+async function loadProducts() {
+  if (!user || !organization) return;
+
+  const { data, error } = await supabase
+    .from("products")
+    .select("*")
+    .eq("organization_id", organization.organization_id)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    alert("Errore caricamento prodotti: " + error.message);
+    return;
+  }
+
+  patch((prev: any) => ({
+    ...prev,
+    products: (data || []).map((p: any) => ({
+      id: p.id,
+      name: p.name,
+      lot: p.lot_number || "",
+      expiry: p.expiry_date || "",
+      location: p.location || "",
+      quantity: p.quantity || "",
+      opened: false,
+      status: getProductStatus(p.expiry_date),
+    })),
+  }));
+}
+
 async function loadNonConformities() {
   if (!user || !organization) return;
 
@@ -663,6 +692,7 @@ useEffect(() => {
     loadTemperatures();
     loadChecklist();
     loadDocuments();
+    loadProducts();
     loadNonConformities();
     loadCleaning();
     loadInvitations();
@@ -978,11 +1008,38 @@ async function addTemperature() {
   setNewTemp({ area: "", value: "", operator: state.currentUser });
 }
 
-  function addProduct() {
-    if (!newProduct.name.trim() || !newProduct.expiry) return;
-    patch((prev: any) => ({ ...prev, products: [{ id: Date.now(), ...newProduct, name: newProduct.name.trim(), opened: false, status: getProductStatus(newProduct.expiry) }, ...prev.products] }));
-    setNewProduct({ name: "", lot: "", expiry: "", location: "", quantity: "" });
+  async function addProduct() {
+  if (!newProduct.name.trim() || !newProduct.expiry) return;
+  if (!user || !organization) return;
+
+  const { error } = await supabase
+    .from("products")
+    .insert({
+      organization_id: organization.organization_id,
+      user_id: user.id,
+
+      name: newProduct.name.trim(),
+      lot_number: newProduct.lot,
+      expiry_date: newProduct.expiry,
+      location: newProduct.location,
+      quantity: newProduct.quantity,
+    });
+
+  if (error) {
+    alert("Errore salvataggio prodotto: " + error.message);
+    return;
   }
+
+  await loadProducts();
+
+  setNewProduct({
+    name: "",
+    lot: "",
+    expiry: "",
+    location: "",
+    quantity: "",
+  });
+}
 
  async function addDocument() {
   if (!newDocument.name.trim() || !documentFile) return;
