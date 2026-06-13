@@ -1306,7 +1306,7 @@ function addStaff() {
     setNewStaff({ name: "", role: "", trainingExpiry: "" });
   }
 
-  async function addSupplier() {
+ async function addSupplier() {
   if (!newSupplier.name.trim()) return;
   if (!user || !organization) return;
 
@@ -1332,6 +1332,23 @@ function addStaff() {
     phone: "",
     approved: true,
   });
+}
+
+async function deleteSupplier(id: string) {
+  if (!organization) return;
+
+  const { error } = await supabase
+    .from("suppliers")
+    .delete()
+    .eq("id", id)
+    .eq("organization_id", organization.organization_id);
+
+  if (error) {
+    alert("Errore eliminazione fornitore: " + error.message);
+    return;
+  }
+
+  await loadSuppliers();
 }
 async function loadCleaning() {
   if (!user || !organization) return;
@@ -2218,7 +2235,91 @@ if (!user) {
   />
 )}</div><div className="flex gap-2"><Badge tone={n.status === "Chiusa" ? "ok" : "danger"}>{n.status}</Badge>{n.status !== "Chiusa" && <Button variant="secondary" onClick={() => closeNonConformity(n.id)}>Chiudi</Button>}</div></div></div></Card>)}</div></>)}
 
-          {page === "fornitori" && <><SectionTitle title="Fornitori qualificati" subtitle="Elenco fornitori, categorie e stato di approvazione." /><Card className="mb-5"><div className="grid gap-3 p-5 md:grid-cols-[1fr_1fr_1fr_auto_auto]"><TextInput placeholder="Nome fornitore" value={newSupplier.name} onChange={(e) => setNewSupplier({ ...newSupplier, name: e.target.value })} /><TextInput placeholder="Categoria" value={newSupplier.category} onChange={(e) => setNewSupplier({ ...newSupplier, category: e.target.value })} /><TextInput placeholder="Telefono" value={newSupplier.phone} onChange={(e) => setNewSupplier({ ...newSupplier, phone: e.target.value })} /><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={newSupplier.approved} onChange={(e) => setNewSupplier({ ...newSupplier, approved: e.target.checked })} />Approvato</label><Button onClick={addSupplier}>Aggiungi</Button></div></Card><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{state.suppliers.map((s: any) => <Card key={s.id}><div className="p-5"><div className="flex items-start justify-between"><div><p className="font-bold">{s.name}</p><p className="text-sm text-slate-500">{s.category} · {s.phone}</p></div><Badge tone={s.approved ? "ok" : "danger"}>{s.approved ? "Approvato" : "Non approvato"}</Badge></div></div></Card>)}</div></>}
+         {page === "fornitori" && (
+  <>
+    <SectionTitle
+      title="Fornitori qualificati"
+      subtitle="Elenco fornitori, categorie e stato di approvazione."
+    />
+
+    <Card className="mb-5">
+      <div className="grid gap-3 p-5 md:grid-cols-[1fr_1fr_1fr_auto_auto]">
+        <TextInput
+          placeholder="Nome fornitore"
+          value={newSupplier.name}
+          onChange={(e) =>
+            setNewSupplier({ ...newSupplier, name: e.target.value })
+          }
+        />
+
+        <TextInput
+          placeholder="Categoria"
+          value={newSupplier.category}
+          onChange={(e) =>
+            setNewSupplier({ ...newSupplier, category: e.target.value })
+          }
+        />
+
+        <TextInput
+          placeholder="Telefono"
+          value={newSupplier.phone}
+          onChange={(e) =>
+            setNewSupplier({ ...newSupplier, phone: e.target.value })
+          }
+        />
+
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={newSupplier.approved}
+            onChange={(e) =>
+              setNewSupplier({
+                ...newSupplier,
+                approved: e.target.checked,
+              })
+            }
+          />
+          Approvato
+        </label>
+
+        <Button onClick={addSupplier}>
+          Aggiungi
+        </Button>
+      </div>
+    </Card>
+
+    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      {state.suppliers.map((s: any) => (
+        <Card key={s.id}>
+          <div className="p-5">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="font-bold">{s.name}</p>
+                <p className="text-sm text-slate-500">
+                  {s.category} · {s.phone}
+                </p>
+              </div>
+
+              <Badge tone={s.approved ? "ok" : "danger"}>
+                {s.approved ? "Approvato" : "Non approvato"}
+              </Badge>
+            </div>
+
+            <div className="mt-4">
+              <Button
+                variant="secondary"
+                onClick={() => deleteSupplier(s.id)}
+              >
+                <Icon name="trash" className="mr-2" />
+                Elimina
+              </Button>
+            </div>
+          </div>
+        </Card>
+      ))}
+    </div>
+  </>
+)}
 
           {page === "report" && <><SectionTitle title="Report e archivio" subtitle="Genera file HTML stampabili in PDF e conserva lo storico report generati." action={<Button variant="secondary" onClick={exportBackup}><Icon name="save" className="mr-2" />Backup JSON</Button>} /><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">{[["temperature", "Registro temperature"], ["checklist", "Checklist giornaliere"], ["nonconformities", "Non conformità"], ["products", "Magazzino e scadenze"]].map(([type, label]) => <Card key={type}><div className="p-5"><p className="font-bold">{label}</p><p className="mt-1 text-sm text-slate-500">Genera file stampabile e salvabile in PDF.</p><Button className="mt-4" onClick={() => createReport(type)}><Icon name="print" className="mr-2" />Genera</Button></div></Card>)}</div><div className="mt-6 grid gap-5 xl:grid-cols-[1fr_1fr]"><Card><div className="p-5"><h3 className="mb-4 text-lg font-bold">Archivio report generati</h3><div className="space-y-2">{state.reports.length === 0 && <p className="text-sm text-slate-500">Nessun report generato.</p>}{state.reports.map((r: any) => <div key={r.id} className="flex items-center justify-between rounded-2xl bg-slate-50 p-3 text-sm"><div><p className="font-medium">{r.filename}</p><p className="text-xs text-slate-500">{new Date(r.createdAt).toLocaleString("it-IT")} · {r.generatedBy}</p></div><Badge tone="blue">{r.type}</Badge></div>)}</div></div></Card><Card><div className="p-5"><h3 className="mb-4 text-lg font-bold">Test interni</h3><div className="space-y-2">{selfTests.map((result: any) => <div key={result.name} className="flex items-center justify-between rounded-2xl bg-slate-50 px-3 py-2 text-sm"><span>{result.name}</span><Badge tone={result.passed ? "ok" : "danger"}>{result.passed ? "PASS" : "FAIL"}</Badge></div>)}</div></div></Card></div></>}
 
