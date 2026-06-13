@@ -602,6 +602,26 @@ async function loadProducts() {
   }));
 }
 
+async function loadSuppliers() {
+  if (!user || !organization) return;
+
+  const { data, error } = await supabase
+    .from("suppliers")
+    .select("*")
+    .eq("organization_id", organization.organization_id)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    alert("Errore caricamento fornitori: " + error.message);
+    return;
+  }
+
+  patch((prev: any) => ({
+    ...prev,
+    suppliers: data || [],
+  }));
+}
+
 async function loadNonConformities() {
   if (!user || !organization) return;
 
@@ -693,6 +713,7 @@ useEffect(() => {
     loadChecklist();
     loadDocuments();
     loadProducts();
+    loadSuppliers();
     loadNonConformities();
     loadCleaning();
     loadInvitations();
@@ -1285,11 +1306,33 @@ function addStaff() {
     setNewStaff({ name: "", role: "", trainingExpiry: "" });
   }
 
-  function addSupplier() {
-    if (!newSupplier.name.trim()) return;
-    patch((prev: any) => ({ ...prev, suppliers: [{ id: Date.now(), ...newSupplier }, ...prev.suppliers] }));
-    setNewSupplier({ name: "", category: "", phone: "", approved: true });
+  async function addSupplier() {
+  if (!newSupplier.name.trim()) return;
+  if (!user || !organization) return;
+
+  const { error } = await supabase.from("suppliers").insert({
+    organization_id: organization.organization_id,
+    user_id: user.id,
+    name: newSupplier.name.trim(),
+    category: newSupplier.category,
+    phone: newSupplier.phone,
+    approved: newSupplier.approved,
+  });
+
+  if (error) {
+    alert("Errore salvataggio fornitore: " + error.message);
+    return;
   }
+
+  await loadSuppliers();
+
+  setNewSupplier({
+    name: "",
+    category: "",
+    phone: "",
+    approved: true,
+  });
+}
 async function loadCleaning() {
   if (!user || !organization) return;
 
