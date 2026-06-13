@@ -1024,19 +1024,6 @@ async function addTemperature() {
       location: newProduct.location,
       quantity: newProduct.quantity,
     });
-async function deleteProduct(id: string) {
-  const { error } = await supabase
-    .from("products")
-    .delete()
-    .eq("id", id);
-
-  if (error) {
-    alert("Errore eliminazione prodotto: " + error.message);
-    return;
-  }
-
-  await loadProducts();
-}
 
   if (error) {
     alert("Errore salvataggio prodotto: " + error.message);
@@ -1054,6 +1041,22 @@ async function deleteProduct(id: string) {
   });
 }
 
+async function deleteProduct(id: string) {
+  if (!organization) return;
+
+  const { error } = await supabase
+    .from("products")
+    .delete()
+    .eq("id", id)
+    .eq("organization_id", organization.organization_id);
+
+  if (error) {
+    alert("Errore eliminazione prodotto: " + error.message);
+    return;
+  }
+
+  await loadProducts();
+}
  async function addDocument() {
   if (!newDocument.name.trim() || !documentFile) return;
 
