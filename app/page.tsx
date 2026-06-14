@@ -431,12 +431,19 @@ async function acceptPendingInvitation(currentUser: any) {
     async (event, session) => {
       if (!active) return;
 
-      if (event === "SIGNED_OUT") {
-        setUser(null);
-        setOrganization(null);
-        setOrganizationData(null);
-        return;
-      }
+    if (event === "PASSWORD_RECOVERY") {
+  setAuthMode("reset");
+  setUser(session?.user ?? null);
+  setMounted(true);
+  return;
+}
+
+if (event === "SIGNED_OUT") {
+  setUser(null);
+  setOrganization(null);
+  setOrganizationData(null);
+  return;
+}
 
       const currentUser = session?.user ?? null;
 
@@ -1315,6 +1322,7 @@ async function resendInvitation(invite: any) {
     return;
   }
 
+
   const res = await fetch("/api/invite-user", {
     method: "POST",
     headers: {
@@ -1343,7 +1351,22 @@ if (json.alreadyRegistered) {
   );
 }
 }
+async function deleteInvitation(id: string) {
+  const ok = confirm("Vuoi eliminare questo invito?");
+  if (!ok) return;
 
+  const { error } = await supabase
+    .from("invitations")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    alert("Errore eliminazione invito: " + error.message);
+    return;
+  }
+
+  await loadInvitations();
+}
 async function addStaff() {
   if (!newStaff.name.trim()) return;
   if (!user || !organization) return;
@@ -2580,6 +2603,14 @@ if (!user) {
       Reinvia
     </Button>
   )}
+
+  <Button
+    variant="secondary"
+    onClick={() => deleteInvitation(invite.id)}
+  >
+    <Icon name="trash" className="mr-2" />
+    Elimina
+  </Button>
 </div>
         </div>
       ))}
