@@ -1294,16 +1294,7 @@ if (!res.ok) {
   return;
 }
 
-setInvitations((prev) => [
-  {
-    id: Date.now(),
-    organization_id: organizationId,
-    email: cleanEmail,
-    role: inviteRole,
-    accepted: false,
-  },
-  ...prev,
-]);
+await loadInvitations();
 
 setInviteEmail("");
 setInviteRole("employee");
@@ -1352,13 +1343,18 @@ if (json.alreadyRegistered) {
 }
 }
 async function deleteInvitation(id: string) {
+  const organizationId = organization?.organization_id;
+
+  if (!organizationId) return;
+
   const ok = confirm("Vuoi eliminare questo invito?");
   if (!ok) return;
 
   const { error } = await supabase
     .from("invitations")
     .delete()
-    .eq("id", id);
+    .eq("id", id)
+    .eq("organization_id", organizationId);
 
   if (error) {
     alert("Errore eliminazione invito: " + error.message);
@@ -1366,8 +1362,7 @@ async function deleteInvitation(id: string) {
   }
 
   await loadInvitations();
-}
-async function addStaff() {
+}async function addStaff() {
   if (!newStaff.name.trim()) return;
   if (!user || !organization) return;
 
