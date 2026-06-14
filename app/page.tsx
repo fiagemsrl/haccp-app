@@ -1344,11 +1344,48 @@ if (json.alreadyRegistered) {
 }
 }
 
-function addStaff() {
-    if (!newStaff.name.trim()) return;
-    patch((prev: any) => ({ ...prev, staff: [{ id: Date.now(), ...newStaff, active: true }, ...prev.staff] }));
-    setNewStaff({ name: "", role: "", trainingExpiry: "" });
+async function addStaff() {
+  if (!newStaff.name.trim()) return;
+  if (!user || !organization) return;
+
+  const { error } = await supabase.from("staff").insert({
+    organization_id: organization.organization_id,
+    user_id: user.id,
+    name: newStaff.name.trim(),
+    role: newStaff.role,
+    training_expiry: newStaff.trainingExpiry || null,
+    active: true,
+  });
+
+  if (error) {
+    alert("Errore salvataggio membro team: " + error.message);
+    return;
   }
+
+  await loadStaff();
+
+  setNewStaff({
+    name: "",
+    role: "",
+    trainingExpiry: "",
+  });
+}  
+async function deleteStaff(id: string) {
+  if (!organization) return;
+
+  const { error } = await supabase
+    .from("staff")
+    .delete()
+    .eq("id", id)
+    .eq("organization_id", organization.organization_id);
+
+  if (error) {
+    alert("Errore eliminazione membro team: " + error.message);
+    return;
+  }
+
+  await loadStaff();
+}
 
  async function addSupplier() {
   if (!newSupplier.name.trim()) return;
@@ -2579,19 +2616,27 @@ if (!user) {
               Formazione: {person.trainingExpiry}
             </p>
 
-            <div className="mt-3">
-              <Badge
-                tone={
-                  daysUntil(person.trainingExpiry) <= 45
-                    ? "warn"
-                    : "ok"
-                }
-              >
-                {daysUntil(person.trainingExpiry) <= 45
-                  ? "Formazione in scadenza"
-                  : "Attivo"}
-              </Badge>
-            </div>
+           <div className="mt-3 flex items-center gap-2">
+  <Badge
+    tone={
+      daysUntil(person.trainingExpiry) <= 45
+        ? "warn"
+        : "ok"
+    }
+  >
+    {daysUntil(person.trainingExpiry) <= 45
+      ? "Formazione in scadenza"
+      : "Attivo"}
+  </Badge>
+
+  <Button
+    variant="secondary"
+    onClick={() => deleteStaff(person.id)}
+  >
+    <Icon name="trash" className="mr-2" />
+    Elimina
+  </Button>
+</div>
           </div>
         </Card>
       ))}
