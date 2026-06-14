@@ -621,7 +621,25 @@ async function loadSuppliers() {
     suppliers: data || [],
   }));
 }
+async function loadAllergens() {
+  if (!user || !organization) return;
 
+  const { data, error } = await supabase
+    .from("allergens")
+    .select("*")
+    .eq("organization_id", organization.organization_id)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    alert("Errore caricamento allergeni: " + error.message);
+    return;
+  }
+
+  patch((prev: any) => ({
+    ...prev,
+    allergens: data || [],
+  }));
+}
 async function loadNonConformities() {
   if (!user || !organization) return;
 
@@ -714,6 +732,7 @@ useEffect(() => {
     loadDocuments();
     loadProducts();
     loadSuppliers();
+    loadAllergens();
     loadNonConformities();
     loadCleaning();
     loadInvitations();
@@ -1400,25 +1419,47 @@ async function addCleaning() {
     product: "",
     operator: state.currentUser,
   });
-}  function addAllergen() {
+}  
+async function addAllergen() {
   if (!newAllergen.product.trim()) return;
+  if (!user || !organization) return;
 
-  patch((prev: any) => ({
-    ...prev,
-    allergens: [
-      {
-        id: Date.now(),
-        product: newAllergen.product,
-        allergens: newAllergen.allergens,
-      },
-      ...(prev.allergens || []),
-    ],
-  }));
+  const { error } = await supabase
+    .from("allergens")
+    .insert({
+      organization_id: organization.organization_id,
+      user_id: user.id,
+      product: newAllergen.product.trim(),
+      allergens: newAllergen.allergens,
+    });
+
+  if (error) {
+    alert("Errore salvataggio allergene: " + error.message);
+    return;
+  }
+
+  await loadAllergens();
 
   setNewAllergen({
     product: "",
     allergens: "",
   });
+}
+async function deleteAllergen(id: string) {
+  if (!organization) return;
+
+  const { error } = await supabase
+    .from("allergens")
+    .delete()
+    .eq("id", id)
+    .eq("organization_id", organization.organization_id);
+
+  if (error) {
+    alert("Errore eliminazione allergene: " + error.message);
+    return;
+  }
+
+  await loadAllergens();
 }
 function removeFrom(collection: string, id: number) {
     patch((prev: any) => ({ ...prev, [collection]: prev[collection].filter((item: any) => item.id !== id) }));
@@ -2097,6 +2138,71 @@ if (!user) {
 )}
 
           {page === "magazzino" && <><SectionTitle title="Magazzino e scadenze" subtitle="Gestione lotti, FIFO, prodotti aperti e scadenze." /><Card className="mb-5"><div className="grid gap-3 p-5 md:grid-cols-[1fr_1fr_1fr_1fr_1fr_auto]"><TextInput placeholder="Prodotto" value={newProduct.name} onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })} /><TextInput placeholder="Lotto" value={newProduct.lot} onChange={(e) => setNewProduct({ ...newProduct, lot: e.target.value })} /><TextInput type="date" value={newProduct.expiry} onChange={(e) => setNewProduct({ ...newProduct, expiry: e.target.value })} /><TextInput placeholder="Posizione" value={newProduct.location} onChange={(e) => setNewProduct({ ...newProduct, location: e.target.value })} /><TextInput placeholder="Quantità" value={newProduct.quantity} onChange={(e) => setNewProduct({ ...newProduct, quantity: e.target.value })} /><Button onClick={addProduct}>Aggiungi</Button></div></Card><div className="mb-5 flex items-center gap-3 rounded-3xl bg-white p-4 shadow-sm"><Icon name="search" /><input className="w-full outline-none" placeholder="Cerca prodotto, lotto o posizione" value={query} onChange={(e) => setQuery(e.target.value)} /></div><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{filteredProducts.map((p: any) => <Card key={p.id}><div className="p-5"><div className="flex items-start justify-between"><div><p className="font-bold">{p.name}</p><p className="text-sm text-slate-500">Lotto {p.lot}</p></div><Badge tone={p.status === "ok" ? "ok" : p.status === "critico" ? "danger" : "warn"}>{p.status === "ok" ? "OK" : p.status === "critico" ? "Critico" : "In scadenza"}</Badge></div><p className="mt-4 text-sm">Scadenza: <b>{p.expiry}</b></p><p className="text-sm text-slate-500">Posizione: {p.location} · Quantità: {p.quantity || "-"}</p><div className="mt-4"><Button variant="secondary" onClick={() => deleteProduct(p.id)}><Icon name="trash" className="mr-2" />Elimina</Button></div></div></Card>)}</div></>}
+{page === "allergeni" && (
+  <>
+    <SectionTitle
+      title="Registro allergeni"
+      subtitle="Gestisci prodotti, preparazioni e allergeni presenti."
+    />
+
+    <Card className="mb-5">
+      <div className="grid gap-3 p-5 md:grid-cols-[1fr_2fr_auto]">
+        <TextInput
+          placeholder="Prodotto o preparazione"
+          value={newAllergen.product}
+          onChange={(e) =>
+            setNewAllergen({
+              ...newAllergen,
+              product: e.target.value,
+            })
+          }
+        />
+
+        <TextInput
+          placeholder="Allergeni, es. glutine, latte, uova"
+          value={newAllergen.allergens}
+          onChange={(e) =>
+            setNewAllergen({
+              ...newAllergen,
+              allergens: e.target.value,
+            })
+          }
+        />
+
+        <Button onClick={addAllergen}>Aggiungi</Button>
+      </div>
+    </Card>
+
+    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      {(state.allergens || []).map((a: any) => (
+        <Card key={a.id}>
+          <div className="p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="font-bold">{a.product}</p>
+                <p className="mt-2 text-sm text-slate-500">
+                  {a.allergens || "Nessun allergene indicato"}
+                </p>
+              </div>
+
+              <Badge tone="warn">Allergeni</Badge>
+            </div>
+
+            <div className="mt-4">
+              <Button
+                variant="secondary"
+                onClick={() => deleteAllergen(a.id)}
+              >
+                <Icon name="trash" className="mr-2" />
+                Elimina
+              </Button>
+            </div>
+          </div>
+        </Card>
+      ))}
+    </div>
+  </>
+)}
 
           {page === "documenti" && (
   <>
