@@ -1420,6 +1420,22 @@ async function addCleaning() {
     operator: state.currentUser,
   });
 }  
+async function deleteCleaning(id: string) {
+  if (!organization) return;
+
+  const { error } = await supabase
+    .from("cleaning_logs")
+    .delete()
+    .eq("id", id)
+    .eq("organization_id", organization.organization_id);
+
+  if (error) {
+    alert("Errore eliminazione pulizia: " + error.message);
+    return;
+  }
+
+  await loadCleaning();
+}
 async function addAllergen() {
   if (!newAllergen.product.trim()) return;
   if (!user || !organization) return;
@@ -2125,7 +2141,7 @@ if (!user) {
               <Badge tone="ok">Registrata</Badge>
               <Button
                 variant="secondary"
-                onClick={() => removeFrom("cleaning", c.id)}
+                onClick={() => deleteCleaning(c.id)}
               >
                 <Icon name="trash" />
               </Button>
