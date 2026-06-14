@@ -1726,23 +1726,36 @@ function exportBackup() {
   function resetDemo() {
     if (confirm("Vuoi davvero ripristinare i dati demo?")) setState(clone(defaultState));
   }
+const currentRole = organization?.role || "employee";
+const isOwner = currentRole === "owner";
 
- const pages = [
+const pages = [
   ["dashboard", "dashboard", "Dashboard"],
   ["checklist", "clipboard", "Checklist"],
   ["temperature", "temp", "Temperature"],
   ["cleaning", "clipboard", "Pulizie"],
-  ["magazzino", "package", "Magazzino"],
-  ["etichette", "document", "Etichette"],
-  ["allergeni", "alert", "Allergeni"],
-  ["documenti", "document", "Documenti"],
-  ["nonconformita", "alert", "Non conformità"],
-  ["fornitori", "supplier", "Fornitori"],
-  ["report", "report", "Report"],
-  ["team", "team", "Team"],
-  ["settings", "settings", "Impostazioni"],
-];
 
+  ...(isOwner
+    ? [
+        ["magazzino", "package", "Magazzino"],
+        ["etichette", "document", "Etichette"],
+        ["allergeni", "alert", "Allergeni"],
+        ["documenti", "document", "Documenti"],
+        ["nonconformita", "alert", "Non conformità"],
+        ["fornitori", "supplier", "Fornitori"],
+        ["report", "report", "Report"],
+        ["team", "team", "Team"],
+        ["settings", "settings", "Impostazioni"],
+      ]
+    : []),
+];
+useEffect(() => {
+  const allowedPageKeys = pages.map((p) => p[0]);
+
+  if (!allowedPageKeys.includes(page)) {
+    setPage("dashboard");
+  }
+}, [page, pages]);
 if (!mounted) {
   return <div className="p-8">Caricamento...</div>;
 }
