@@ -705,7 +705,31 @@ console.log("INVITATIONS:", data);
 
 setInvitations(data || []);
 }
+async function loadStaff() {
+  if (!user || !organization) return;
 
+  const { data, error } = await supabase
+    .from("staff")
+    .select("*")
+    .eq("organization_id", organization.organization_id)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    alert("Errore caricamento team: " + error.message);
+    return;
+  }
+
+  patch((prev) => ({
+    ...prev,
+    staff: (data || []).map((person) => ({
+      id: person.id,
+      name: person.name,
+      role: person.role,
+      trainingExpiry: person.training_expiry,
+      active: person.active,
+    })),
+  }));
+}
 
 useEffect(() => {
   if (!organizationData) return;
@@ -736,6 +760,7 @@ useEffect(() => {
     loadNonConformities();
     loadCleaning();
     loadInvitations();
+    loadStaff();
   }
 }, [user, organization]);
 async function handleAuth() {
