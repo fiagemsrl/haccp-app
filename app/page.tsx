@@ -1350,19 +1350,29 @@ async function deleteInvitation(id: string) {
   const ok = confirm("Vuoi eliminare questo invito?");
   if (!ok) return;
 
-  const { error } = await supabase
+  console.log("DELETE INVITATION ID:", id);
+
+  const { data, error } = await supabase
     .from("invitations")
     .delete()
     .eq("id", id)
-    .eq("organization_id", organizationId);
+    .eq("organization_id", organizationId)
+    .select();
+
+  console.log("DELETE INVITATION RESULT:", data, error);
 
   if (error) {
     alert("Errore eliminazione invito: " + error.message);
     return;
   }
 
+  setInvitations((prev) =>
+    prev.filter((invite) => invite.id !== id)
+  );
+
   await loadInvitations();
-}async function addStaff() {
+}
+async function addStaff() {
   if (!newStaff.name.trim()) return;
   if (!user || !organization) return;
 
