@@ -2394,16 +2394,56 @@ if (!user) {
 
     <Card className="mb-5">
       <div className="grid gap-3 p-5 md:grid-cols-[1fr_1fr_1fr_1fr_auto]">
-        <TextInput
-          placeholder="Nome preparazione"
-          value={newFoodLabel.productName}
-          onChange={(e) =>
-            setNewFoodLabel({
-              ...newFoodLabel,
-              productName: e.target.value,
-            })
-          }
-        />
+        <SelectInput
+  value={newFoodLabel.productName}
+  onChange={(e) => {
+    const selected = e.target.value;
+
+    const recipes = {
+      "Ragù": {
+        ingredients:
+          "carne bovina, carne suina, carne vitello, pomodori pelati, concentrato di pomodoro, sedano, carote, cipolle, olio EVO, sale, pepe, basilico, rosmarino, salvia, alloro",
+        allergens: "sedano",
+      },
+      "Pomodoro Semplice": {
+        ingredients:
+          "pomodori pelati, cipolle, olio EVO, sale, burro, basilico",
+        allergens: "latte",
+      },
+      "Salsa Funghi Porcini": {
+        ingredients:
+          "funghi porcini gelo, aglio, olio EVO, dado di porcini, farina 00, prezzemolo",
+        allergens: "glutine, sedano",
+      },
+      "Pallotte Cacio e Ova": {
+        ingredients:
+          "uova, formaggio stagionato, pane, prezzemolo",
+        allergens: "uova, latte, glutine",
+      },
+      "Pizza e Foje": {
+        ingredients:
+          "verdure miste gelo, olio EVO, aglio, sale, farina di mais, peperone di Altino",
+        allergens: "nessuno dichiarato",
+      },
+    };
+
+    const recipe = recipes[selected];
+
+    setNewFoodLabel({
+      ...newFoodLabel,
+      productName: selected,
+      ingredients: recipe?.ingredients || "",
+      allergens: recipe?.allergens || "",
+    });
+  }}
+>
+  <option value="">Seleziona preparazione</option>
+  <option value="Ragù">Ragù</option>
+  <option value="Pomodoro Semplice">Pomodoro Semplice</option>
+  <option value="Salsa Funghi Porcini">Salsa Funghi Porcini</option>
+  <option value="Pallotte Cacio e Ova">Pallotte Cacio e Ova</option>
+  <option value="Pizza e Foje">Pizza e Foje</option>
+</SelectInput>
 
         <TextInput
           placeholder="Lotto"
