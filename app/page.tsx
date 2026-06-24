@@ -2390,7 +2390,18 @@ if (!user) {
     <SectionTitle
       title="Etichette preparazioni"
       subtitle="Storico etichette, ingredienti, allergeni e scadenze delle preparazioni."
-    />
+    /><div className="mb-4 grid max-w-xs grid-cols-1 gap-3">
+  <SelectInput
+    value={selectedYear}
+    onChange={(e) => setSelectedYear(e.target.value)}
+  >
+    <option value="all">Tutti gli anni</option>
+    <option value="2026">2026</option>
+    <option value="2025">2025</option>
+    <option value="2024">2024</option>
+    <option value="2023">2023</option>
+  </SelectInput>
+</div>
 
     <Card className="mb-5">
       <div className="grid gap-3 p-5 md:grid-cols-[1fr_1fr_1fr_1fr_auto]">
@@ -2520,7 +2531,14 @@ if (!user) {
     </Card>
 
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-      {foodLabels.map((label: any) => (
+      {foodLabels
+  .filter((label: any) => {
+    if (selectedYear === "all") return true;
+
+    const date = String(label.opened_at || label.created_at || "");
+    return date.startsWith(selectedYear);
+  })
+  .map((label: any) => (
         <Card key={label.id}>
           <div className="p-5">
             <div className="flex items-start justify-between gap-4">
