@@ -1584,6 +1584,117 @@ async function deleteAllergen(id: string) {
 
   await loadAllergens();
 }
+async function addFoodLabel() {
+  if (!newFoodLabel.productName.trim()) return;
+  if (!user || !organization) return;
+
+  const { error } = await supabase.from("food_labels").insert({
+    organization_id: organization.organization_id,
+    user_id: user.id,
+    product_name: newFoodLabel.productName.trim(),
+    supplier: newFoodLabel.supplier || "",
+    lot: newFoodLabel.lot || "",
+    expiry: newFoodLabel.expiry || null,
+    opened_at: newFoodLabel.openedAt || null,
+    ingredients: newFoodLabel.ingredients || "",
+    allergens: newFoodLabel.allergens || "",
+    notes: newFoodLabel.notes || "",
+  });
+
+  if (error) {
+    alert("Errore salvataggio etichetta: " + error.message);
+    return;
+  }
+
+  await loadFoodLabels();
+
+  setNewFoodLabel({
+    productName: "",
+    supplier: "",
+    lot: "",
+    expiry: "",
+    openedAt: "",
+    ingredients: "",
+    allergens: "",
+    notes: "",
+  });
+}
+
+async function deleteFoodLabel(id: string) {
+  if (!organization) return;
+
+  const ok = confirm("Vuoi eliminare questa etichetta?");
+  if (!ok) return;
+
+  const { error } = await supabase
+    .from("food_labels")
+    .delete()
+    .eq("id", id)
+    .eq("organization_id", organization.organization_id);
+
+  if (error) {
+    alert("Errore eliminazione etichetta: " + error.message);
+    return;
+  }
+
+  await loadFoodLabels();
+}
+
+function printFoodLabel(label: any) {
+  const html = `
+    <!doctype html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>Etichetta ${label.product_name}</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            padding: 24px;
+            color: #111827;
+          }
+          .label {
+            width: 360px;
+            border: 2px solid #111827;
+            border-radius: 12px;
+            padding: 16px;
+          }
+          h1 {
+            font-size: 22px;
+            margin: 0 0 12px;
+          }
+          p {
+            margin: 6px 0;
+            font-size: 13px;
+          }
+          .small {
+            font-size: 11px;
+            color: #4b5563;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="label">
+          <h1>${label.product_name || ""}</h1>
+          <p><b>Ingredienti:</b> ${label.ingredients || "-"}</p>
+          <p><b>Allergeni:</b> ${label.allergens || "-"}</p>
+          <p><b>Lotto:</b> ${label.lot || "-"}</p>
+          <p><b>Preparato il:</b> ${label.opened_at || "-"}</p>
+          <p><b>Scadenza:</b> ${label.expiry || "-"}</p>
+          <p><b>Note:</b> ${label.notes || "-"}</p>
+          <p class="small">HACCP Easy - ${state.restaurant.name || ""}</p>
+        </div>
+        <script>window.print()</script>
+      </body>
+    </html>
+  `;
+
+  const win = window.open("", "_blank");
+  if (!win) return;
+
+  win.document.write(html);
+  win.document.close();
+}
 function removeFrom(collection: string, id: number) {
     patch((prev: any) => ({ ...prev, [collection]: prev[collection].filter((item: any) => item.id !== id) }));
   }
@@ -2274,6 +2385,171 @@ if (!user) {
 )}
 
           {page === "magazzino" && <><SectionTitle title="Magazzino e scadenze" subtitle="Gestione lotti, FIFO, prodotti aperti e scadenze." /><Card className="mb-5"><div className="grid gap-3 p-5 md:grid-cols-[1fr_1fr_1fr_1fr_1fr_auto]"><TextInput placeholder="Prodotto" value={newProduct.name} onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })} /><TextInput placeholder="Lotto" value={newProduct.lot} onChange={(e) => setNewProduct({ ...newProduct, lot: e.target.value })} /><TextInput type="date" value={newProduct.expiry} onChange={(e) => setNewProduct({ ...newProduct, expiry: e.target.value })} /><TextInput placeholder="Posizione" value={newProduct.location} onChange={(e) => setNewProduct({ ...newProduct, location: e.target.value })} /><TextInput placeholder="Quantità" value={newProduct.quantity} onChange={(e) => setNewProduct({ ...newProduct, quantity: e.target.value })} /><Button onClick={addProduct}>Aggiungi</Button></div></Card><div className="mb-5 flex items-center gap-3 rounded-3xl bg-white p-4 shadow-sm"><Icon name="search" /><input className="w-full outline-none" placeholder="Cerca prodotto, lotto o posizione" value={query} onChange={(e) => setQuery(e.target.value)} /></div><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{filteredProducts.map((p: any) => <Card key={p.id}><div className="p-5"><div className="flex items-start justify-between"><div><p className="font-bold">{p.name}</p><p className="text-sm text-slate-500">Lotto {p.lot}</p></div><Badge tone={p.status === "ok" ? "ok" : p.status === "critico" ? "danger" : "warn"}>{p.status === "ok" ? "OK" : p.status === "critico" ? "Critico" : "In scadenza"}</Badge></div><p className="mt-4 text-sm">Scadenza: <b>{p.expiry}</b></p><p className="text-sm text-slate-500">Posizione: {p.location} · Quantità: {p.quantity || "-"}</p><div className="mt-4"><Button variant="secondary" onClick={() => deleteProduct(p.id)}><Icon name="trash" className="mr-2" />Elimina</Button></div></div></Card>)}</div></>}
+{page === "etichette" && (
+  <>
+    <SectionTitle
+      title="Etichette preparazioni"
+      subtitle="Storico etichette, ingredienti, allergeni e scadenze delle preparazioni."
+    />
+
+    <Card className="mb-5">
+      <div className="grid gap-3 p-5 md:grid-cols-[1fr_1fr_1fr_1fr_auto]">
+        <TextInput
+          placeholder="Nome preparazione"
+          value={newFoodLabel.productName}
+          onChange={(e) =>
+            setNewFoodLabel({
+              ...newFoodLabel,
+              productName: e.target.value,
+            })
+          }
+        />
+
+        <TextInput
+          placeholder="Lotto"
+          value={newFoodLabel.lot}
+          onChange={(e) =>
+            setNewFoodLabel({
+              ...newFoodLabel,
+              lot: e.target.value,
+            })
+          }
+        />
+
+        <TextInput
+          type="date"
+          value={newFoodLabel.openedAt}
+          onChange={(e) =>
+            setNewFoodLabel({
+              ...newFoodLabel,
+              openedAt: e.target.value,
+            })
+          }
+        />
+
+        <TextInput
+          type="date"
+          value={newFoodLabel.expiry}
+          onChange={(e) =>
+            setNewFoodLabel({
+              ...newFoodLabel,
+              expiry: e.target.value,
+            })
+          }
+        />
+
+        <Button onClick={addFoodLabel}>Salva</Button>
+      </div>
+
+      <div className="grid gap-3 px-5 pb-5 md:grid-cols-2">
+        <TextInput
+          placeholder="Ingredienti"
+          value={newFoodLabel.ingredients}
+          onChange={(e) =>
+            setNewFoodLabel({
+              ...newFoodLabel,
+              ingredients: e.target.value,
+            })
+          }
+        />
+
+        <TextInput
+          placeholder="Allergeni"
+          value={newFoodLabel.allergens}
+          onChange={(e) =>
+            setNewFoodLabel({
+              ...newFoodLabel,
+              allergens: e.target.value,
+            })
+          }
+        />
+      </div>
+
+      <div className="px-5 pb-5">
+        <TextInput
+          placeholder="Note"
+          value={newFoodLabel.notes}
+          onChange={(e) =>
+            setNewFoodLabel({
+              ...newFoodLabel,
+              notes: e.target.value,
+            })
+          }
+        />
+      </div>
+    </Card>
+
+    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      {foodLabels.map((label: any) => (
+        <Card key={label.id}>
+          <div className="p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="font-bold">
+                  {label.product_name}
+                </p>
+
+                <p className="mt-1 text-sm text-slate-500">
+                  Lotto: {label.lot || "-"}
+                </p>
+
+                <p className="mt-1 text-sm text-slate-500">
+                  Preparato: {label.opened_at || "-"}
+                </p>
+
+                <p className="mt-1 text-sm text-slate-500">
+                  Scadenza: {label.expiry || "-"}
+                </p>
+              </div>
+
+              <Badge
+                tone={
+                  label.expiry && daysUntil(label.expiry) <= 1
+                    ? "danger"
+                    : "ok"
+                }
+              >
+                Etichetta
+              </Badge>
+            </div>
+
+            <p className="mt-4 text-sm">
+              <b>Ingredienti:</b> {label.ingredients || "-"}
+            </p>
+
+            <p className="mt-2 text-sm">
+              <b>Allergeni:</b> {label.allergens || "-"}
+            </p>
+
+            {label.notes && (
+              <p className="mt-2 text-sm text-slate-500">
+                Note: {label.notes}
+              </p>
+            )}
+
+            <div className="mt-4 flex gap-2">
+              <Button
+                variant="secondary"
+                onClick={() => printFoodLabel(label)}
+              >
+                <Icon name="print" className="mr-2" />
+                Stampa
+              </Button>
+
+              <Button
+                variant="secondary"
+                onClick={() => deleteFoodLabel(label.id)}
+              >
+                <Icon name="trash" className="mr-2" />
+                Elimina
+              </Button>
+            </div>
+          </div>
+        </Card>
+      ))}
+    </div>
+  </>
+)}
 {page === "allergeni" && (
   <>
     <SectionTitle
