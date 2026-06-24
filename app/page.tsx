@@ -647,6 +647,22 @@ async function loadAllergens() {
     allergens: data || [],
   }));
 }
+async function loadFoodLabels() {
+  if (!user || !organization) return;
+
+  const { data, error } = await supabase
+    .from("food_labels")
+    .select("*")
+    .eq("organization_id", organization.organization_id)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    alert("Errore caricamento etichette: " + error.message);
+    return;
+  }
+
+  setFoodLabels(data || []);
+}
 async function loadNonConformities() {
   if (!user || !organization) return;
 
@@ -764,6 +780,7 @@ useEffect(() => {
     loadProducts();
     loadSuppliers();
     loadAllergens();
+    loadFoodLabels();
     loadNonConformities();
     loadCleaning();
     loadInvitations();
