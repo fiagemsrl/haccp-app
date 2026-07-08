@@ -12,20 +12,23 @@ export default async function ControlloPage({
 }) {
   const token = params.token;
 
-  const { data: organization } = await supabaseAdmin
-    .from("organizations")
-    .select("*")
-    .eq("public_control_token", token)
-    .single();
+  const { data, error } = await supabaseAdmin
+  .from("organizations")
+  .select("*");
 
-  if (!organization) {
-    return (
-      <div style={{ padding: 40, fontFamily: "Arial" }}>
-        <h1>Registro HACCP non trovato</h1>
-        <p>QR Code non valido o portale non disponibile.</p>
-      </div>
-    );
-  }
+return (
+  <pre style={{ padding: 30, fontSize: 14 }}>
+    {JSON.stringify(
+      {
+        token,
+        error,
+        organizations: data,
+      },
+      null,
+      2
+    )}
+  </pre>
+);
 
   const organizationId = organization.id;
 
