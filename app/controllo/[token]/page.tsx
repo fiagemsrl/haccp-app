@@ -8,27 +8,24 @@ const supabaseAdmin = createClient(
 export default async function ControlloPage({
   params,
 }: {
-  params: { token: string };
+  params: Promise<{ token: string }>;
 }) {
-  const token = params.token;
+  const { token } = await params;
 
-  const { data, error } = await supabaseAdmin
-  .from("organizations")
-  .select("*");
+   const { data: organization, error } = await supabaseAdmin
+    .from("organizations")
+    .select("*")
+    .eq("public_control_token", token)
+    .single();
 
-return (
-  <pre style={{ padding: 30, fontSize: 14 }}>
-    {JSON.stringify(
-      {
-        token,
-        error,
-        organizations: data,
-      },
-      null,
-      2
-    )}
-  </pre>
-);
+  if (error || !organization) {
+    return (
+      <div style={{ padding: 40, fontFamily: "Arial" }}>
+        <h1>Registro HACCP non trovato</h1>
+        <p>QR Code non valido o portale non disponibile.</p>
+      </div>
+    );
+  }
 
   const organizationId = organization.id;
 
