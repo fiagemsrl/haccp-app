@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-
+import PublicHeader from "../../../components/controllo/PublicHeader";
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -95,13 +95,7 @@ export default async function ControlloPage({
   return (
     <main style={{ fontFamily: "Arial", background: "#f8fafc", minHeight: "100vh", padding: 24 }}>
       <section style={{ maxWidth: 1100, margin: "0 auto" }}>
-        <div style={{ background: "#0f172a", color: "white", borderRadius: 24, padding: 28 }}>
-          <h1 style={{ margin: 0 }}>Registro HACCP Digitale</h1>
-          <p style={{ marginTop: 8 }}>{organization.name}</p>
-          <p style={{ fontSize: 13, opacity: 0.8 }}>
-            Consultazione pubblica in sola lettura
-          </p>
-        </div>
+        <PublicHeader restaurant={organization} />
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16, marginTop: 24 }}>
           <Card title="Temperature" value={temperatures?.length || 0} />
