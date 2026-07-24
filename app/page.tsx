@@ -2436,6 +2436,21 @@ if (!user) {
           "verdure miste gelo, olio EVO, aglio, sale, farina di mais, peperone di Altino",
         allergens: "nessuno dichiarato",
       },
+     "Cillit": {
+        ingredients:
+           "farina di grano tenero, uova, zucchero, lievito, marmellata di uva, marmellata di ciliegie, biscotti secchi, olio di girasole, aromi",
+        allergens: "glutine, uova, latte (possibile), soia (possibile)",
+      },
+"Croccantino alle Mandorle Caramellate": {
+  ingredients:
+    "panna, uova, zucchero, mandorle caramellate",
+  allergens: "latte, uova, frutta a guscio (mandorle)",
+},
+"Tiramisù": {
+  ingredients:
+    "mascarpone, uova pastorizzate, zucchero, caffè, savoiardi",
+  allergens: "latte, uova, glutine",
+},
     };
 
     const recipe = recipes[selected];
@@ -2454,6 +2469,9 @@ if (!user) {
   <option value="Salsa Funghi Porcini">Salsa Funghi Porcini</option>
   <option value="Pallotte Cacio e Ova">Pallotte Cacio e Ova</option>
   <option value="Pizza e Foje">Pizza e Foje</option>
+  <option value="Cillit">Cillit</option>
+  <option value="Croccantino alle Mandorle Caramellate">Croccantino alle Mandorle Caramellate</option>
+  <option value="Tiramisù">Tiramisù</option>
 </SelectInput>
 
         <TextInput
