@@ -1646,52 +1646,126 @@ function printFoodLabel(label: any) {
     <html>
       <head>
         <meta charset="utf-8" />
-        <title>Etichetta ${label.product_name}</title>
+        <title>Etichetta ${label.product_name || ""}</title>
+
         <style>
+          @page {
+            size: 57.15mm 31.75mm;
+            margin: 0;
+          }
+
+          * {
+            box-sizing: border-box;
+          }
+
+          html,
+          body {
+            width: 57.15mm;
+            height: 31.75mm;
+            margin: 0;
+            padding: 0;
+          }
+
           body {
             font-family: Arial, sans-serif;
-            padding: 24px;
-            color: #111827;
+            color: #000;
+            overflow: hidden;
           }
+
           .label {
-            width: 360px;
-            border: 2px solid #111827;
-            border-radius: 12px;
-            padding: 16px;
+            width: 57.15mm;
+            height: 31.75mm;
+            padding: 1.2mm 1.5mm;
+            overflow: hidden;
           }
+
           h1 {
-            font-size: 22px;
-            margin: 0 0 12px;
+            margin: 0 0 0.7mm;
+            font-size: 9pt;
+            line-height: 1;
+            text-align: center;
+            text-transform: uppercase;
           }
+
           p {
-            margin: 6px 0;
-            font-size: 13px;
+            margin: 0.25mm 0;
+            font-size: 5.6pt;
+            line-height: 1.05;
           }
-          .small {
-            font-size: 11px;
-            color: #4b5563;
+
+          .dates {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            column-gap: 1mm;
+          }
+
+          .ingredients,
+          .allergens {
+            font-size: 5.2pt;
+            line-height: 1.02;
+          }
+
+          .allergens {
+            font-weight: bold;
+          }
+
+          .footer {
+            margin-top: 0.4mm;
+            padding-top: 0.4mm;
+            border-top: 0.2mm solid #000;
+            font-size: 4.8pt;
+            text-align: center;
           }
         </style>
       </head>
+
       <body>
         <div class="label">
           <h1>${label.product_name || ""}</h1>
-          <p><b>Ingredienti:</b> ${label.ingredients || "-"}</p>
-          <p><b>Allergeni:</b> ${label.allergens || "-"}</p>
+
+          <p class="ingredients">
+            <b>Ingredienti:</b> ${label.ingredients || "-"}
+          </p>
+
+          <p class="allergens">
+            Allergeni: ${label.allergens || "-"}
+          </p>
+
+          <div class="dates">
+            <p><b>Preparato:</b> ${label.opened_at || "-"}</p>
+            <p><b>Scadenza:</b> ${label.expiry || "-"}</p>
+          </div>
+
           <p><b>Lotto:</b> ${label.lot || "-"}</p>
-          <p><b>Preparato il:</b> ${label.opened_at || "-"}</p>
-          <p><b>Scadenza:</b> ${label.expiry || "-"}</p>
-          <p><b>Note:</b> ${label.notes || "-"}</p>
-          <p class="small">HACCP Easy - ${state.restaurant.name || ""}</p>
+
+          ${
+            label.notes
+              ? `<p><b>Note:</b> ${label.notes}</p>`
+              : ""
+          }
+
+          <p class="footer">
+            HACCP Easy · ${state.restaurant.name || ""}
+          </p>
         </div>
-        <script>window.print()</script>
+
+        <script>
+          window.onload = function () {
+            window.print();
+          };
+        </script>
       </body>
     </html>
   `;
 
   const win = window.open("", "_blank");
-  if (!win) return;
 
+  if (!win) {
+    alert("Consenti i popup per stampare l'etichetta.");
+    return;
+  }
+
+  win.document.open();
   win.document.write(html);
   win.document.close();
 }
