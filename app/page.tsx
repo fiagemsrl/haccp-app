@@ -1650,7 +1650,7 @@ function printFoodLabel(label: any) {
 
         <style>
           @page {
-            size: 57.15mm 31.75mm;
+            size: 101.6mm 152.4mm;
             margin: 0;
           }
 
@@ -1660,8 +1660,8 @@ function printFoodLabel(label: any) {
 
           html,
           body {
-            width: 57.15mm;
-            height: 31.75mm;
+            width: 101.6mm;
+            height: 152.4mm;
             margin: 0;
             padding: 0;
           }
@@ -1673,80 +1673,180 @@ function printFoodLabel(label: any) {
           }
 
           .label {
-            width: 57.15mm;
-            height: 31.75mm;
-            padding: 1.2mm 1.5mm;
-            overflow: hidden;
+            width: 101.6mm;
+            height: 152.4mm;
+            padding: 6mm;
+          }
+
+          .header {
+            text-align: center;
+            border-bottom: 2px solid #000;
+            padding-bottom: 4mm;
+            margin-bottom: 5mm;
+          }
+
+          .restaurant {
+            font-size: 12pt;
+            font-weight: bold;
+            margin-bottom: 2mm;
           }
 
           h1 {
-            margin: 0 0 0.7mm;
-            font-size: 9pt;
-            line-height: 1;
-            text-align: center;
+            font-size: 22pt;
+            line-height: 1.1;
+            margin: 0;
             text-transform: uppercase;
           }
 
-          p {
-            margin: 0.25mm 0;
-            font-size: 5.6pt;
-            line-height: 1.05;
+          .section {
+            margin-bottom: 4mm;
+          }
+
+          .title {
+            font-size: 11pt;
+            font-weight: bold;
+            margin-bottom: 1mm;
+          }
+
+          .text {
+            font-size: 10pt;
+            line-height: 1.3;
+          }
+
+          .allergens {
+            border: 2px solid #000;
+            padding: 3mm;
+            margin: 4mm 0;
+          }
+
+          .allergens .title {
+            font-size: 12pt;
+          }
+
+          .allergens .text {
+            font-size: 11pt;
+            font-weight: bold;
           }
 
           .dates {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            column-gap: 1mm;
+            gap: 3mm;
+            margin: 5mm 0;
           }
 
-          .ingredients,
-          .allergens {
-            font-size: 5.2pt;
-            line-height: 1.02;
+          .date-box {
+            border: 1px solid #000;
+            padding: 3mm;
           }
 
-          .allergens {
+          .date-label {
+            font-size: 9pt;
             font-weight: bold;
           }
 
+          .date-value {
+            font-size: 13pt;
+            font-weight: bold;
+            margin-top: 1mm;
+          }
+
+          .lot {
+            font-size: 11pt;
+            margin-bottom: 4mm;
+          }
+
           .footer {
-            margin-top: 0.4mm;
-            padding-top: 0.4mm;
-            border-top: 0.2mm solid #000;
-            font-size: 4.8pt;
+            position: absolute;
+            bottom: 5mm;
+            left: 6mm;
+            right: 6mm;
+            border-top: 1px solid #000;
+            padding-top: 2mm;
             text-align: center;
+            font-size: 8pt;
+          }
+
+          @media print {
+            html,
+            body {
+              width: 101.6mm;
+              height: 152.4mm;
+            }
           }
         </style>
       </head>
 
       <body>
         <div class="label">
-          <h1>${label.product_name || ""}</h1>
 
-          <p class="ingredients">
-            <b>Ingredienti:</b> ${label.ingredients || "-"}
-          </p>
+          <div class="header">
+            <div class="restaurant">
+              ${state.restaurant.name || "DOMA RISTORANTE"}
+            </div>
 
-          <p class="allergens">
-            Allergeni: ${label.allergens || "-"}
-          </p>
-
-          <div class="dates">
-            <p><b>Preparato:</b> ${label.opened_at || "-"}</p>
-            <p><b>Scadenza:</b> ${label.expiry || "-"}</p>
+            <h1>
+              ${label.product_name || ""}
+            </h1>
           </div>
 
-          <p><b>Lotto:</b> ${label.lot || "-"}</p>
+          <div class="section">
+            <div class="title">INGREDIENTI</div>
+            <div class="text">
+              ${label.ingredients || "-"}
+            </div>
+          </div>
+
+          <div class="allergens">
+            <div class="title">ALLERGENI</div>
+            <div class="text">
+              ${label.allergens || "-"}
+            </div>
+          </div>
+
+          <div class="lot">
+            <b>Lotto:</b> ${label.lot || "-"}
+          </div>
+
+          <div class="dates">
+
+            <div class="date-box">
+              <div class="date-label">
+                PREPARATO IL
+              </div>
+              <div class="date-value">
+                ${label.opened_at || "-"}
+              </div>
+            </div>
+
+            <div class="date-box">
+              <div class="date-label">
+                SCADENZA
+              </div>
+              <div class="date-value">
+                ${label.expiry || "-"}
+              </div>
+            </div>
+
+          </div>
 
           ${
             label.notes
-              ? `<p><b>Note:</b> ${label.notes}</p>`
+              ? `
+                <div class="section">
+                  <div class="title">NOTE / CONSERVAZIONE</div>
+                  <div class="text">
+                    ${label.notes}
+                  </div>
+                </div>
+              `
               : ""
           }
 
-          <p class="footer">
-            HACCP Easy · ${state.restaurant.name || ""}
-          </p>
+          <div class="footer">
+            HACCP Easy • ${state.restaurant.name || ""}
+          </div>
+
         </div>
 
         <script>
@@ -1754,6 +1854,7 @@ function printFoodLabel(label: any) {
             window.print();
           };
         </script>
+
       </body>
     </html>
   `;
