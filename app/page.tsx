@@ -1782,7 +1782,7 @@ function printFoodLabel(label: any) {
 
           <div class="header">
             <div class="restaurant">
-              ${state.restaurant.name || "DOMA RISTORANTE"}
+              FIAGEM SRLS
             </div>
 
             <h1>
