@@ -1844,7 +1844,7 @@ function printFoodLabel(label: any) {
           }
 
           <div class="footer">
-            HACCP Easy • ${state.restaurant.name || ""}
+            FIAGEM SRLS
           </div>
 
         </div>
